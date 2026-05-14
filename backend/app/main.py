@@ -18,7 +18,27 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import catalog, llm, optimizer, qdrant_client
-from app.schemas import Allocation, FormInput, QuerySpec
+from app.schemas import Allocation, FormInput, LensWeights, QuerySpec
+
+# Mirror of YIELD_SOURCE_ORDER in scripts/build_vectors.py — keep in sync.
+# First 11 slots map to the YieldSource enum; last 5 are reserved padding.
+_YIELD_SOURCE_ORDER = [
+    "real_yield", "lending_spread", "amm_fees", "options_premium",
+    "points_airdrop", "emissions", "mev_capture", "basis_trade",
+    "restaking_reward", "stablecoin_issuance", "validator_commission",
+]
+_YIELD_SOURCE_DIM = 16
+# Weights applied to the user's top-5 drag-rank picks.
+_RANK_WEIGHTS = [0.4, 0.25, 0.15, 0.1, 0.05]
+
+
+def _ranking_to_yield_source_target(ranking: list[str]) -> list[float]:
+    """Build a 16d target vector from the user's yield_source_ranking."""
+    vec = [0.0] * _YIELD_SOURCE_DIM
+    for i, source in enumerate(ranking[: len(_RANK_WEIGHTS)]):
+        if source in _YIELD_SOURCE_ORDER:
+            vec[_YIELD_SOURCE_ORDER.index(source)] = _RANK_WEIGHTS[i]
+    return vec
 
 UMAP_PATH = Path(__file__).parent.parent / "data" / "umap.json"
 VECTORS_PATH = Path(__file__).parent.parent / "data" / "vectors.json"
@@ -188,7 +208,25 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
             except Exception:
                 log.exception("discovery_walk failed; continuing without swipe anchors")
 
-    candidates = _run_query(spec)
+    # If the user drag-ranked yield sources, route through multi_vector_prefetch
+    # with a yield_source target instead of the anchor-based recommend.
+    if form.yield_source_ranking:
+        ranking_values = [s.value for s in form.yield_source_ranking]
+        target = _ranking_to_yield_source_target(ranking_values)
+        log.info("yield_source_ranking: %s -> target nonzero @ %s",
+                 ranking_values, [i for i, v in enumerate(target) if v > 0])
+        try:
+            candidates = qdrant_client.multi_vector_prefetch(
+                target_vectors={"yield_source": target},
+                weights=LensWeights(yield_source=1.0),
+                hard_filters=spec.hard_filters,
+                limit=20,
+            )
+        except Exception:
+            log.exception("multi_vector_prefetch failed; falling back to _run_query")
+            candidates = _run_query(spec)
+    else:
+        candidates = _run_query(spec)
     log.info("qdrant: %d candidates", len(candidates))
 
     if optimizer_name == "mean_variance":

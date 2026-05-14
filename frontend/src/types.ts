@@ -17,6 +17,11 @@ export type TaxTreatment =
 
 export type TaxWrapper = "taxable" | "traditional_ira" | "roth_ira" | "hsa";
 
+export type YieldSource =
+  | "real_yield" | "lending_spread" | "amm_fees" | "options_premium"
+  | "points_airdrop" | "emissions" | "mev_capture" | "basis_trade"
+  | "restaking_reward" | "stablecoin_issuance" | "validator_commission";
+
 export interface DrawdownSwipe {
   scenario_id: string;
   decision: "held" | "sold";
@@ -49,6 +54,7 @@ export interface FormInput {
   min_audit_count: number;
   min_tvl_usd: number;
   max_lockup_days: number | null;
+  yield_source_ranking?: YieldSource[] | null;
   drawdown_swipes?: DrawdownSwipe[] | null;
   freeform: string;
 }

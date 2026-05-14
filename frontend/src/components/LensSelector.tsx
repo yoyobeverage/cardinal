@@ -9,6 +9,7 @@ const LABELS: Record<string, string> = {
   risk:          "Risk",
   yield_source:  "Yield Source",
   correlation:   "Correlation",
+  tax_treatment: "Tax",
   composability: "Composability",
 };
 

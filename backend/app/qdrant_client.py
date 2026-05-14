@@ -25,6 +25,7 @@ VECTOR_CONFIGS: dict[str, qm.VectorParams] = {
     "risk":          qm.VectorParams(size=32,   distance=qm.Distance.EUCLID),
     "yield_source":  qm.VectorParams(size=16,   distance=qm.Distance.COSINE),
     "correlation":   qm.VectorParams(size=8,    distance=qm.Distance.COSINE),
+    "tax_treatment": qm.VectorParams(size=12,   distance=qm.Distance.COSINE),
     "composability": qm.VectorParams(size=64,   distance=qm.Distance.DOT),
 }
 

@@ -47,17 +47,18 @@ Form + freeform        Translator              Qdrant (5 named vectors)
 
 Cardinal would collapse if any of these five Qdrant features were removed:
 
-### 1. Named vectors (5 per point)
+### 1. Named vectors (6 per point)
 
-Each catalog point carries 4 populated vectors and 1 reserved slot:
+Each catalog point carries 6 populated vectors:
 
 | Vector | Dim | Distance | What it captures |
 |---|---:|---|---|
 | `narrative` | 1024 | cosine | BGE-large-en-v1.5 embedding of protocol description, product, category, audit firms |
 | `risk` | 32 | euclidean | Hand-engineered: age z-score, log-audit-count, audit-firm reputation, max drawdown, oracle diversity, chain one-hot, custody one-hot, log-TVL, … |
 | `yield_source` | 16 | cosine | Soft one-hot mix of real_yield / lending_spread / AMM fees / options premium / points / emissions / MEV / basis trade / restaking / stablecoin issuance / validator commission |
-| `correlation` | 8 | cosine | Rolling correlations vs BTC, ETH, SPX, IEF, HYG, DXY, gold, USDC short rate (category-default fallback at hackathon scope) |
-| `composability` | 64 | dot | Reserved for node2vec over the receipt-token graph |
+| `correlation` | 8 | cosine | Trailing Pearson correlations vs BTC, ETH, SPX, IEF, HYG, DXY, gold, USDC short rate. Real DefiLlama historical APY + yfinance reference returns where ≥60 days of overlapping history exists; category-default fallback otherwise. |
+| `tax_treatment` | 12 | cosine | One-hot of ordinary_income / qualified_dividend / capital_gain / return_of_capital / qbi / uncertain |
+| `composability` | 64 | dot | node2vec embedding over a hand-curated receipt-token graph (which protocols accept which other protocols' receipt tokens as collateral/inputs) |
 
 → See [`backend/scripts/build_vectors.py`](backend/scripts/build_vectors.py) and [`backend/app/qdrant_client.py:VECTOR_CONFIGS`](backend/app/qdrant_client.py)
 
@@ -96,7 +97,7 @@ For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (
 
 → `backend/app/optimizer.py`
 
-## Catalog (83 protocols, 4 lenses)
+## Catalog (83 protocols, 6 lenses)
 
 Ingested via two sources:
 
@@ -172,7 +173,7 @@ Three persona buttons pre-fill the form so the demo can show different shaping b
 
 ## The lens-swap money shot
 
-The most visually distinctive moment in the demo is the lens selector on the results page. Same 58 protocols, same allocation highlighted, but as you click between **Narrative → Risk → Yield Source → Correlation**, every dot animates to its new 2D UMAP projection in 600 ms. LSTs cluster tightly under Narrative, then spread out under Risk, then cluster differently again under Yield Source. The drilldown radar shows a per-lens similarity profile for any allocated protocol.
+The most visually distinctive moment in the demo is the lens selector on the results page. Same 83 protocols, same allocation highlighted, but as you click between **Narrative → Risk → Yield Source → Correlation → Tax → Composability**, every dot animates to its new 2D UMAP projection in 600 ms. LSTs cluster tightly under Narrative, then spread out under Risk, then cluster differently again under Yield Source, then re-cluster on Composability (because they all feed into the same set of downstream protocols). The drilldown radar shows a per-lens similarity profile for any allocated protocol — now with all 6 spokes.
 
 The point is to make the multi-vector index legible. There's only one portfolio, but it lives in four different similarity spaces simultaneously, and Qdrant's named-vector design is what makes that visible.
 
@@ -182,11 +183,11 @@ Demo video link will appear here once recorded.
 
 ## Roadmap (post-hackathon)
 
-- Replace the category-default correlation vector with actual rolling Pearson correlations computed from DefiLlama `/chart/{pool_id}` historical APY series
-- Populate the reserved `composability` vector via node2vec over the receipt-token graph (Pendle → underlying → Curve → …)
-- Promote the tax_multiplier lookup to a full 12d `tax_treatment` vector so the lens swap can show a tax-axis projection
-- Frontend code-splitting — current bundle is ~680 KB, chart libraries are the main weight
 - Push catalog to 100+ protocols with manual additions for tokenized money-market funds, structured notes, and tax-advantaged products
+- Expand the receipt-token composability graph beyond the current ~50 hand-curated edges
+- Pull historical APY for the manual.yaml RWA/CeFi entries so the correlation vector isn't on category-defaults for them
+- Mobile-first redesign (current breakpoints work but the desktop layout is the assumed default)
+- Auth + per-user portfolio history persistence (currently stateless)
 
 ## License
 

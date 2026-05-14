@@ -44,6 +44,17 @@ YIELD_SOURCE_ORDER = [
 ]
 YIELD_SOURCE_DIM = 16
 
+# Tax-treatment one-hot. 6 enum values + 6 reserved = 12d.
+TAX_TREATMENT_ORDER = [
+    "ordinary_income",
+    "qualified_dividend",
+    "capital_gain",
+    "return_of_capital",
+    "qbi",
+    "uncertain",
+]
+TAX_TREATMENT_DIM = 12
+
 # Correlation vector — 8d cosine. Index order:
 #   [BTC, ETH, SPX, IEF, HYG, DXY, GOLD, USDC_rate]
 # Values are eyeballed expected 1y rolling Pearson correlations per category.
@@ -205,16 +216,71 @@ def build_yield_source(catalog: list[tuple[str, PointPayload]]) -> dict[str, lis
     return out
 
 
-def build_correlation(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]]:
-    """8d cosine vector per protocol using category-default correlations.
+def build_tax_treatment(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]]:
+    """One-hot of payload.tax_treatment in TAX_TREATMENT_ORDER. 12d cosine."""
+    out: dict[str, list[float]] = {}
+    for pid, p in catalog:
+        v = [0.0] * TAX_TREATMENT_DIM
+        value = p.tax_treatment.value
+        if value in TAX_TREATMENT_ORDER:
+            v[TAX_TREATMENT_ORDER.index(value)] = 1.0
+        out[pid] = v
+    return out
 
-    Future work: pull DefiLlama /chart/{pool_id} historical APY and compute
-    actual rolling correlations vs the 8 reference asset return series.
+
+def build_correlation(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]]:
+    """8d cosine vector per protocol. Uses real DefiLlama historical APY +
+    yfinance reference returns when available; falls back to CATEGORY_DEFAULT
+    when a protocol lacks sufficient history.
     """
+    import sqlite3
+    import json as _json
+
+    import correlation_data
+
+    # Map readable catalog id -> DefiLlama pool_id by looking up raw_data
+    conn = sqlite3.connect(CACHE_PATH)
+    pool_ids: dict[str, str] = {}
+    for pid, _ in catalog:
+        row = conn.execute(
+            "SELECT raw_data FROM protocols WHERE id = ? AND source = 'defillama'",
+            (pid,),
+        ).fetchone()
+        if row and row[0]:
+            try:
+                raw = _json.loads(row[0])
+                if raw.get("pool"):
+                    pool_ids[pid] = raw["pool"]
+            except Exception:
+                pass
+    conn.close()
+
+    print(f"  {len(pool_ids)} catalog rows have DefiLlama pool ids -> fetching APY history")
+
+    try:
+        ref_returns = correlation_data.fetch_reference_returns()
+    except Exception as e:
+        print(f"  reference-asset fetch failed ({e}); using category defaults for all")
+        ref_returns = None
+
     out: dict[str, list[float]] = {}
     default = [0.0] * CORRELATION_DIM
+    real_count = 0
+    fallback_count = 0
     for pid, p in catalog:
-        out[pid] = list(CATEGORY_DEFAULT_CORRELATION.get(p.category.value, default))
+        used_real = False
+        if ref_returns is not None and pid in pool_ids:
+            apy = correlation_data.fetch_pool_apy(pool_ids[pid])
+            if apy is not None:
+                corr = correlation_data.compute_protocol_correlation(apy, ref_returns)
+                if corr is not None:
+                    out[pid] = corr
+                    real_count += 1
+                    used_real = True
+        if not used_real:
+            out[pid] = list(CATEGORY_DEFAULT_CORRELATION.get(p.category.value, default))
+            fallback_count += 1
+    print(f"  real correlations: {real_count}, category-default fallback: {fallback_count}")
     return out
 
 
@@ -243,11 +309,24 @@ def main() -> int:
     dim_c = len(next(iter(correlation.values())))
     print(f"  {len(correlation)} correlation vectors x {dim_c}d")
 
+    print("\nBuilding tax_treatment vector (12d, one-hot)...")
+    tax_treatment = build_tax_treatment(catalog)
+    dim_t = len(next(iter(tax_treatment.values())))
+    print(f"  {len(tax_treatment)} tax_treatment vectors x {dim_t}d")
+
+    print("\nBuilding composability vector (64d, node2vec)...")
+    from build_composability import build_composability
+    composability = build_composability(catalog)
+    dim_co = len(next(iter(composability.values())))
+    print(f"  {len(composability)} composability vectors x {dim_co}d")
+
     output = {
-        "narrative": narrative,
-        "risk": risk,
-        "yield_source": yield_source,
-        "correlation": correlation,
+        "narrative":     narrative,
+        "risk":          risk,
+        "yield_source":  yield_source,
+        "correlation":   correlation,
+        "tax_treatment": tax_treatment,
+        "composability": composability,
     }
 
     VECTORS_PATH.parent.mkdir(exist_ok=True)

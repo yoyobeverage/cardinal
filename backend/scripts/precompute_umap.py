@@ -21,6 +21,7 @@ METRICS: dict[str, str] = {
     "risk":          "euclidean",
     "yield_source":  "cosine",
     "correlation":   "cosine",
+    "tax_treatment": "cosine",
     "composability": "cosine",
 }
 

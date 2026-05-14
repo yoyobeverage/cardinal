@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { lazy, Suspense, useState } from "react";
 
 import type { DrawdownSwipe } from "../types";
+
+// Lazy chart so recharts isn't paid until the user expands the swipe stack.
+const DrawdownChart = lazy(() => import("./DrawdownChart"));
 
 interface Scenario {
   id: string;
@@ -138,19 +140,9 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
                 </div>
                 <div className="mt-2 flex items-center gap-4">
                   <div className="h-16 w-32">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={s.chartData}>
-                        <YAxis hide domain={[0, 1.05]} />
-                        <Area
-                          type="monotone"
-                          dataKey="v"
-                          stroke="#f43f5e"
-                          fill="#f43f5e"
-                          fillOpacity={0.25}
-                          strokeWidth={1.5}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<div className="h-full w-full animate-pulse rounded bg-zinc-900" />}>
+                      <DrawdownChart data={s.chartData} />
+                    </Suspense>
                   </div>
                   <div className="flex gap-2">
                     <button

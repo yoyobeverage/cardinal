@@ -1,13 +1,9 @@
-import { useEffect } from "react";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-} from "recharts";
+import { lazy, Suspense, useEffect } from "react";
 
 import type { Position } from "../types";
+
+// recharts is heavy (~250 KB). Lazy-import so it only loads when the drawer opens.
+const RadarPanel = lazy(() => import("./RadarPanel"));
 
 interface Props {
   position: Position | null;
@@ -19,6 +15,7 @@ const LENS_LABEL: Record<string, string> = {
   risk: "Risk",
   yield_source: "Yield Source",
   correlation: "Correlation",
+  tax_treatment: "Tax",
   composability: "Composability",
 };
 
@@ -86,24 +83,9 @@ export default function DrilldownDrawer({ position, onClose }: Props) {
               <h3 className="mb-2 text-sm text-zinc-400">Per-lens similarity to your anchors</h3>
               {radarData.length >= 3 ? (
                 <div className="flex justify-center rounded border border-zinc-800 bg-zinc-900 p-2">
-                  <RadarChart width={420} height={280} data={radarData}>
-                    <PolarGrid stroke="#3f3f46" />
-                    <PolarAngleAxis dataKey="lens" tick={{ fill: "#a1a1aa", fontSize: 12 }} />
-                    <PolarRadiusAxis
-                      angle={90}
-                      domain={[0, 100]}
-                      tick={{ fill: "#52525b", fontSize: 10 }}
-                      tickCount={5}
-                    />
-                    <Radar
-                      name="similarity"
-                      dataKey="score"
-                      stroke="#10b981"
-                      fill="#10b981"
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                    />
-                  </RadarChart>
+                  <Suspense fallback={<div className="h-[280px] w-[420px] animate-pulse rounded bg-zinc-900" />}>
+                    <RadarPanel data={radarData} />
+                  </Suspense>
                 </div>
               ) : (
                 <div className="space-y-2 rounded border border-zinc-800 bg-zinc-900 p-4">

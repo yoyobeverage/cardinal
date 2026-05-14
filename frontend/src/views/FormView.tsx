@@ -3,7 +3,8 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 
 import { fetchPortfolio, type OptimizerName } from "../api";
 import DrawdownSwipeStack from "../components/DrawdownSwipe";
-import type { Allocation, Chain, DrawdownSwipe, FormInput, TaxWrapper } from "../types";
+import YieldSourceRank from "../components/YieldSourceRank";
+import type { Allocation, Chain, DrawdownSwipe, FormInput, TaxWrapper, YieldSource } from "../types";
 
 const ALL_CHAINS: Chain[] = [
   "ethereum", "base", "arbitrum", "optimism", "polygon", "solana", "bsc", "avalanche",
@@ -74,6 +75,7 @@ export default function FormView({ onAllocation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [optimizer, setOptimizer] = useState<OptimizerName>("weighted_sum");
   const [swipes, setSwipes] = useState<DrawdownSwipe[]>([]);
+  const [yieldRanking, setYieldRanking] = useState<YieldSource[]>([]);
   const { register, handleSubmit, reset } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
@@ -103,6 +105,7 @@ export default function FormView({ onAllocation }: Props) {
             ? null
             : Number(data.max_lockup_days),
         drawdown_swipes: swipes.length > 0 ? swipes : null,
+        yield_source_ranking: yieldRanking.length > 0 ? yieldRanking : null,
         freeform: data.freeform,
       };
       const alloc = await fetchPortfolio(payload, optimizer);
@@ -216,6 +219,8 @@ export default function FormView({ onAllocation }: Props) {
         </div>
       </fieldset>
 
+      <YieldSourceRank ranking={yieldRanking} onChange={setYieldRanking} />
+
       <DrawdownSwipeStack decisions={swipes} onChange={setSwipes} />
 
       <label className={labelCls}>
@@ -272,8 +277,24 @@ export default function FormView({ onAllocation }: Props) {
       <button
         type="submit"
         disabled={loading}
-        className="rounded bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
+        {loading && (
+          <svg
+            className="h-4 w-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+            <path
+              d="M12 2a10 10 0 0 1 10 10"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
         {loading ? "Generating allocation…" : "Generate allocation"}
       </button>
     </form>
