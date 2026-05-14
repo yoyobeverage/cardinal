@@ -97,6 +97,32 @@ def universe() -> list[dict]:
     return out
 
 
+_COSINE_LENSES = {"narrative", "yield_source", "correlation", "composability"}
+
+
+def _normalize_lens_score(lens: str, raw: float) -> float:
+    """Map raw Qdrant scores to [0,1] similarity (1 = best match) for radar display."""
+    if lens in _COSINE_LENSES:
+        return max(0.0, min(1.0, raw))
+    if lens == "risk":
+        # Euclidean: smaller distance = closer. Map to [0,1] via 1/(1+d).
+        return 1.0 / (1.0 + max(0.0, raw))
+    return raw
+
+
+def _attach_per_lens_scores(positions: list, anchor_ids: list[str]) -> list:
+    if not positions or not anchor_ids:
+        return positions
+    point_ids = [p.protocol_id for p in positions]
+    raw = qdrant_client.per_lens_similarity_batch(point_ids, anchor_ids)
+    for pos in positions:
+        pos.per_lens_scores = {
+            lens: _normalize_lens_score(lens, score)
+            for lens, score in raw.get(pos.protocol_id, {}).items()
+        }
+    return positions
+
+
 @app.post("/api/portfolio")
 def portfolio(form: FormInput) -> Allocation:
     log.info("portfolio: capital=$%s freeform=%r", form.capital_usd, form.freeform[:80])
@@ -114,6 +140,7 @@ def portfolio(form: FormInput) -> Allocation:
     log.info("qdrant: %d candidates", len(candidates))
 
     positions = optimizer.weighted_sum(candidates, form.capital_usd)
+    positions = _attach_per_lens_scores(positions, spec.positive_anchors)
     log.info("optimizer: %d positions, weights=%s", len(positions), [round(p.weight, 3) for p in positions])
 
     allocation = Allocation(

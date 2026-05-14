@@ -13,6 +13,7 @@ interface UniversePoint {
 interface Props {
   currentLens: string;
   allocatedIds: Set<string>;
+  onPointClick?: (id: string) => void;
 }
 
 const VIEW_SIZE = 480;
@@ -36,7 +37,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   stablecoin_issuance: "#c084fc",
 };
 
-export default function LensScatter({ currentLens, allocatedIds }: Props) {
+export default function LensScatter({ currentLens, allocatedIds, onPointClick }: Props) {
   const [points, setPoints] = useState<UniversePoint[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +83,11 @@ export default function LensScatter({ currentLens, allocatedIds }: Props) {
               stroke={isAllocated ? "#fafafa" : "none"}
               strokeWidth={1.5}
               opacity={isAllocated ? 1 : 0.4}
-              style={{ transition: "r 200ms ease, opacity 200ms ease" }}
+              style={{
+                transition: "r 200ms ease, opacity 200ms ease",
+                cursor: isAllocated && onPointClick ? "pointer" : "default",
+              }}
+              onClick={() => isAllocated && onPointClick?.(p.id)}
             >
               <title>
                 {p.protocol} — {p.product}

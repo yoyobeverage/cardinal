@@ -163,17 +163,66 @@ def fallback_spec(form: FormInput) -> QuerySpec:
     )
 
 
-def narrate(allocation: Allocation) -> str:
-    """Day 4 placeholder. Deterministic markdown summary. Gemini-narrated in Day 7."""
+_NARRATOR_SYSTEM_PROMPT = """You are a financial assistant. You will receive a portfolio of crypto yield products that was already selected by a quantitative vector-search system; you are NOT making the selection, just explaining it.
+
+Write a roughly 150-word markdown explanation of why this portfolio fits the user's stated concerns. Use these rules:
+
+- Open with one sentence describing the overall strategy in plain English.
+- Then one sentence per major position (top 3 by weight) naming the protocol and what role it plays.
+- Close with one sentence acknowledging how the portfolio addresses each user concern.
+- Do not recommend changes. Do not invent risks or properties not in the data.
+- Use plain markdown (bold/italic ok). Never use headers (#).
+- Be concrete, not generic. Reference actual protocol names and APYs."""
+
+
+def _fallback_narration(allocation: Allocation) -> str:
     if not allocation.positions:
         return "No allocation could be produced from your input."
-    lines = [f"## Allocation across {len(allocation.positions)} protocols\n"]
-    for pos in allocation.positions:
+    lines = [f"Allocated across {len(allocation.positions)} protocols:"]
+    for pos in allocation.positions[:3]:
         lines.append(
             f"- **{pos.payload.protocol}** ({pos.payload.product}): "
-            f"{pos.weight * 100:.1f}% (${pos.dollars:,.0f}) "
-            f"at {pos.payload.current_apy:.2f}% APY"
+            f"{pos.weight * 100:.1f}% at {pos.payload.current_apy:.2f}% APY"
         )
     if allocation.extracted_concerns:
-        lines.append("\n**Concerns addressed:** " + ", ".join(allocation.extracted_concerns))
+        lines.append("Addresses concerns: " + ", ".join(allocation.extracted_concerns))
     return "\n".join(lines)
+
+
+def narrate(allocation: Allocation) -> str:
+    """Single Gemini call producing a ~150-word markdown explanation card."""
+    if not allocation.positions:
+        return "No allocation could be produced from your input."
+    try:
+        position_lines = []
+        for pos in allocation.positions:
+            position_lines.append(
+                f"- {pos.payload.protocol} ({pos.payload.product}, {pos.payload.category.value}): "
+                f"{pos.weight * 100:.1f}% allocation (${pos.dollars:,.0f}), "
+                f"{pos.payload.current_apy:.2f}% APY, "
+                f"max drawdown {pos.payload.max_drawdown_1y:.1%}, "
+                f"{pos.payload.audit_count} audits, {pos.payload.lockup_days}d lockup"
+            )
+        concerns_str = "; ".join(allocation.extracted_concerns) or "(none specifically stated)"
+
+        user_message = (
+            "Portfolio positions (already selected by the quantitative system):\n"
+            + "\n".join(position_lines)
+            + f"\n\nUser's concerns: {concerns_str}\n\n"
+            "Write the ~150-word markdown explanation now."
+        )
+
+        response = _client().models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=user_message,
+            config={
+                "system_instruction": _NARRATOR_SYSTEM_PROMPT,
+            },
+        )
+        text = (response.text or "").strip()
+        if not text:
+            return _fallback_narration(allocation)
+        return text
+    except Exception:
+        log.exception("narrator failed; using deterministic fallback")
+        return _fallback_narration(allocation)

@@ -215,17 +215,30 @@ def lens_query(
 
 
 def per_lens_similarity(point_id: str, anchor_ids: Sequence[str]) -> dict[str, float]:
-    """For drilldown radar (Day 7). Returns {lens_name: similarity_score}.
+    """Returns {lens_name: raw_similarity_score} for a single point vs averaged anchors.
 
-    For each populated lens, runs a recommend against the averaged anchor and pulls
-    the score of point_id from the result set. Lenses without vectors for point_id
-    (stretch vectors before they're built) get omitted from the output.
+    Caller should normalize across distance metrics — cosine scores live in [-1, 1],
+    Euclidean (risk) returns raw distance where smaller is closer.
     """
-    if not anchor_ids:
-        return {}
+    return per_lens_similarity_batch([point_id], anchor_ids).get(point_id, {})
+
+
+def per_lens_similarity_batch(
+    point_ids: Sequence[str],
+    anchor_ids: Sequence[str],
+) -> dict[str, dict[str, float]]:
+    """{point_id: {lens: raw_score}} for many points in 1 query per lens.
+
+    For each populated lens, runs a single recommend against the averaged anchors,
+    pulls up to 1000 results, then maps each target point_id to its score. Lenses
+    that aren't populated (stretch vectors before they're built) return empty maps.
+    """
+    if not anchor_ids or not point_ids:
+        return {pid: {} for pid in point_ids}
     client = get_client()
-    target_uuid = point_uuid(point_id)
-    out: dict[str, float] = {}
+    target_uuids = {pid: point_uuid(pid) for pid in point_ids}
+    uuid_to_id = {uuid: pid for pid, uuid in target_uuids.items()}
+    out: dict[str, dict[str, float]] = {pid: {} for pid in point_ids}
     for lens in VECTOR_CONFIGS:
         try:
             res = client.query_points(
@@ -243,7 +256,7 @@ def per_lens_similarity(point_id: str, anchor_ids: Sequence[str]) -> dict[str, f
         except Exception:
             continue
         for p in res:
-            if str(p.id) == target_uuid:
-                out[lens] = float(p.score)
-                break
+            pid = uuid_to_id.get(str(p.id))
+            if pid is not None:
+                out[pid][lens] = float(p.score)
     return out

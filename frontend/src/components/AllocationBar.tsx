@@ -7,9 +7,10 @@ const COLORS = [
 
 interface Props {
   positions: Position[];
+  onPositionClick?: (p: Position) => void;
 }
 
-export default function AllocationBar({ positions }: Props) {
+export default function AllocationBar({ positions, onPositionClick }: Props) {
   if (positions.length === 0) {
     return <div className="text-zinc-500">No positions to display.</div>;
   }
@@ -20,9 +21,11 @@ export default function AllocationBar({ positions }: Props) {
     <div className="space-y-4">
       <div className="flex h-14 overflow-hidden rounded border border-zinc-800">
         {positions.map((p, i) => (
-          <div
+          <button
             key={p.protocol_id}
-            className={`${COLORS[i % COLORS.length]} flex items-center justify-center text-xs font-medium text-white`}
+            type="button"
+            onClick={() => onPositionClick?.(p)}
+            className={`${COLORS[i % COLORS.length]} flex items-center justify-center text-xs font-medium text-white transition hover:brightness-110`}
             style={{ width: `${p.weight * 100}%` }}
             title={
               `${p.payload.protocol} — ${p.payload.product}\n` +
@@ -31,7 +34,7 @@ export default function AllocationBar({ positions }: Props) {
             }
           >
             {p.weight > 0.05 ? `${(p.weight * 100).toFixed(0)}%` : ""}
-          </div>
+          </button>
         ))}
       </div>
 
@@ -48,7 +51,14 @@ export default function AllocationBar({ positions }: Props) {
           </thead>
           <tbody>
             {positions.map((p, i) => (
-              <tr key={p.protocol_id} className="border-t border-zinc-800">
+              <tr
+                key={p.protocol_id}
+                className={
+                  "border-t border-zinc-800 " +
+                  (onPositionClick ? "cursor-pointer transition hover:bg-zinc-900" : "")
+                }
+                onClick={() => onPositionClick?.(p)}
+              >
                 <td className="py-2">
                   <span className="inline-flex items-center gap-2">
                     <span className={`inline-block h-3 w-3 rounded ${COLORS[i % COLORS.length]}`} />

@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 
 import AllocationBar from "../components/AllocationBar";
+import DrilldownDrawer from "../components/DrilldownDrawer";
+import ExplanationCard from "../components/ExplanationCard";
 import LensScatter from "../components/LensScatter";
 import LensSelector from "../components/LensSelector";
-import type { Allocation } from "../types";
+import type { Allocation, Position } from "../types";
 
 interface Props {
   allocation: Allocation;
@@ -14,10 +16,20 @@ const AVAILABLE_LENSES = ["narrative", "risk"];
 
 export default function ResultsView({ allocation, onBack }: Props) {
   const [lens, setLens] = useState<string>("narrative");
+  const [selected, setSelected] = useState<Position | null>(null);
+
   const allocatedIds = useMemo(
     () => new Set(allocation.positions.map((p) => p.protocol_id)),
     [allocation.positions],
   );
+
+  const positionById = useMemo(() => {
+    const map = new Map<string, Position>();
+    for (const p of allocation.positions) {
+      map.set(p.protocol_id, p);
+    }
+    return map;
+  }, [allocation.positions]);
 
   return (
     <div className="space-y-8">
@@ -32,21 +44,29 @@ export default function ResultsView({ allocation, onBack }: Props) {
         </button>
       </div>
 
-      <AllocationBar positions={allocation.positions} />
+      <AllocationBar
+        positions={allocation.positions}
+        onPositionClick={setSelected}
+      />
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm text-zinc-400">Universe map · same portfolio, different lens</h3>
-          <LensSelector
-            lenses={AVAILABLE_LENSES}
-            current={lens}
-            onChange={setLens}
-          />
+          <h3 className="text-sm text-zinc-400">
+            Universe map · same portfolio, different lens
+          </h3>
+          <LensSelector lenses={AVAILABLE_LENSES} current={lens} onChange={setLens} />
         </div>
-        <LensScatter currentLens={lens} allocatedIds={allocatedIds} />
+        <LensScatter
+          currentLens={lens}
+          allocatedIds={allocatedIds}
+          onPointClick={(id) => {
+            const pos = positionById.get(id);
+            if (pos) setSelected(pos);
+          }}
+        />
         <p className="mt-2 text-xs text-zinc-500">
-          Highlighted dots are the {allocatedIds.size} protocols in your allocation. Switch lenses
-          to see how the same portfolio rearranges across orthogonal similarity axes.
+          Highlighted dots are the {allocatedIds.size} protocols in your allocation. Click any one
+          for the drilldown.
         </p>
       </div>
 
@@ -64,11 +84,11 @@ export default function ResultsView({ allocation, onBack }: Props) {
       )}
 
       <div>
-        <h3 className="mb-2 text-sm text-zinc-400">Explanation</h3>
-        <pre className="whitespace-pre-wrap rounded border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300">
-{allocation.explanation}
-        </pre>
+        <h3 className="mb-2 text-sm text-zinc-400">Why this allocation</h3>
+        <ExplanationCard markdown={allocation.explanation} />
       </div>
+
+      <DrilldownDrawer position={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
