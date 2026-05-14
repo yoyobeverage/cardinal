@@ -66,9 +66,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Cardinal", lifespan=lifespan)
+
+# Open CORS: Cardinal exposes only unauthenticated read-only and idempotent endpoints,
+# so the standard concerns around credentialed cross-site requests don't apply. The
+# deployed Vercel URL is not known until after first deploy, so wildcarding avoids a
+# chicken-and-egg redeploy cycle.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

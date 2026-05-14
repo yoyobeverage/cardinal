@@ -1,0 +1,23 @@
+# Exclude everything Docker doesn't need to keep the build context tight.
+
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+.env.*
+!.env.example
+
+scripts/
+tests/
+data/manual.yaml
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+*.md
+*.log
