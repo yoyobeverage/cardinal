@@ -1,0 +1,224 @@
+# Hand-curated RWA / CeFi-adjacent yield products that DefiLlama doesn't cover well.
+# Schema mirrors PointPayload in backend/app/schemas.py.
+# Numerics are best-guess estimates as of 2026-05; refine with primary sources when possible.
+
+protocols:
+  - id: maple_high_yield_secured
+    protocol: Maple Finance
+    product: High Yield Secured Pool
+    category: institutional_lending
+    chains: [ethereum]
+    current_apy: 11.2
+    tvl_usd: 95000000
+    audit_count: 3
+    audit_firms: [trail_of_bits, peckshield, three_sigma]
+    max_drawdown_1y: 0.03
+    lockup_days: 30
+    launched_at: 2024-04-15
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      lending_spread: 1.0
+    description: >
+      Overcollateralized loans to vetted institutional borrowers (market makers, trading firms).
+      Collateral held in segregated custody at Anchorage and BitGo. 30-day notice for redemption.
+      Historical performance includes a 2022 default on USTC-related loans, after which Maple
+      moved to overcollateralized-only.
+    url: https://maple.finance
+
+  - id: blackrock_buidl
+    protocol: BlackRock
+    product: BUIDL (USD Institutional Digital Liquidity Fund)
+    category: rwa_treasury
+    chains: [ethereum, polygon, arbitrum, solana, optimism, avalanche]
+    current_apy: 4.45
+    tvl_usd: 2350000000
+    audit_count: 0
+    audit_firms: []
+    max_drawdown_1y: 0.001
+    lockup_days: 0
+    launched_at: 2024-03-15
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      BlackRock's tokenized money market fund holding short-term US Treasuries, repo agreements,
+      and cash. Issued through Securitize as the transfer agent. Institutional-only with 1M
+      USD minimum subscription, transferable between whitelisted KYC'd wallets. Daily NAV
+      computed off-chain; dividend distributions paid in BUIDL tokens monthly. The dominant
+      tokenized T-bill product by AUM as of 2026.
+    url: https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network
+
+  - id: centrifuge_anemoy_liquid_treasury
+    protocol: Centrifuge
+    product: Anemoy Liquid Treasury Fund
+    category: rwa_treasury
+    chains: [ethereum]
+    current_apy: 5.05
+    tvl_usd: 45000000
+    audit_count: 2
+    audit_firms: [trail_of_bits, runtime_verification]
+    max_drawdown_1y: 0.003
+    lockup_days: 1
+    launched_at: 2023-09-12
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      Anemoy Capital's BVI-incorporated fund holding short-duration US Treasury Bills,
+      tokenized on Centrifuge's RWA infrastructure. Open to qualified investors (non-US for
+      retail). Same-day redemption during US market hours. Yield tracks 3-month T-bill rate
+      minus a 25 bps management fee.
+    url: https://anemoy.io
+
+  - id: hashnote_usyc
+    protocol: Hashnote
+    product: USYC (US Yield Coin)
+    category: rwa_treasury
+    chains: [ethereum]
+    current_apy: 4.95
+    tvl_usd: 220000000
+    audit_count: 1
+    audit_firms: [code4rena]
+    max_drawdown_1y: 0.002
+    lockup_days: 0
+    launched_at: 2023-11-20
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      Hashnote's tokenized short-duration T-bill product, structured as a fund managed by
+      Hashnote Cayman. Acquired by Circle in early 2025, integrated as collateral for USDC
+      institutional treasury operations. KYC required for primary mint/redeem.
+    url: https://www.hashnote.com
+
+  - id: openeden_tbill
+    protocol: OpenEden
+    product: TBILL Vault
+    category: rwa_treasury
+    chains: [ethereum, arbitrum]
+    current_apy: 4.85
+    tvl_usd: 95000000
+    audit_count: 2
+    audit_firms: [paladin, certik]
+    max_drawdown_1y: 0.003
+    lockup_days: 1
+    launched_at: 2023-05-02
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      OpenEden's TBILL token is backed by short-duration US Treasury Bills held by a Singapore-
+      regulated BVI SPV. KYC required, accessible to non-US qualified investors. Withdrawals
+      typically processed within one business day. Moody's rated.
+    url: https://openeden.com
+
+  - id: mountain_usdm
+    protocol: Mountain Protocol
+    product: USDM (yield-bearing stablecoin)
+    category: rwa_treasury
+    chains: [ethereum, polygon, arbitrum, base, optimism]
+    current_apy: 4.7
+    tvl_usd: 55000000
+    audit_count: 2
+    audit_firms: [openzeppelin, pessimistic]
+    max_drawdown_1y: 0.002
+    lockup_days: 0
+    launched_at: 2023-09-21
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      USDM is a rebasing stablecoin backed by short-term US Treasuries held by a Bermuda-
+      regulated trust. Daily yield accrues via rebase. Permissionless transfers (non-US users
+      only via terms of service). Distinguishes itself from competitors by not requiring KYC
+      for secondary holders.
+    url: https://mountainprotocol.com
+
+  - id: franklin_benji_fobxx
+    protocol: Franklin Templeton
+    product: BENJI (FOBXX OnChain Money Market Fund)
+    category: rwa_treasury
+    chains: [polygon, arbitrum, base, ethereum, avalanche, solana]
+    current_apy: 4.85
+    tvl_usd: 685000000
+    audit_count: 0
+    audit_firms: []
+    max_drawdown_1y: 0.001
+    lockup_days: 0
+    launched_at: 2021-04-06
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      Franklin OnChain US Government Money Fund, ticker FOBXX, with on-chain share tracking
+      via the BENJI token. SEC-registered 1940 Act mutual fund, accessible to US persons.
+      Holds short-duration government securities and repo. Among the oldest tokenized fund
+      products with a daily NAV.
+    url: https://www.franklintempleton.com/investments/options/money-market-funds/products/29386/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX
+
+  - id: goldfinch_senior_pool
+    protocol: Goldfinch
+    product: Senior Pool
+    category: institutional_lending
+    chains: [ethereum]
+    current_apy: 7.85
+    tvl_usd: 35000000
+    audit_count: 2
+    audit_firms: [certik, trail_of_bits]
+    max_drawdown_1y: 0.08
+    lockup_days: 90
+    launched_at: 2021-07-12
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      lending_spread: 1.0
+    description: >
+      Goldfinch finances unsecured credit to emerging-market businesses (fintech lenders in
+      Mexico, Nigeria, Southeast Asia). Senior Pool depositors get first claim on borrower
+      repayments; Backers absorb first-loss. KYC required. Quarterly withdrawal windows.
+      Several borrower defaults in 2023-2024 reduced trust though never breached senior tranche.
+    url: https://goldfinch.finance
+
+  - id: matrixdock_stbt
+    protocol: Matrixdock
+    product: STBT (Short-term Treasury Bill Token)
+    category: rwa_treasury
+    chains: [ethereum]
+    current_apy: 4.95
+    tvl_usd: 40000000
+    audit_count: 2
+    audit_firms: [secure3, peckshield]
+    max_drawdown_1y: 0.003
+    lockup_days: 1
+    launched_at: 2023-01-25
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      STBT is Matrixport's tokenized T-bill product, structured as a fund domiciled in the
+      BVI. Targets institutional investors and qualified non-US individuals. Yield tracks the
+      benchmark short-term Treasury index. Whitelisted transfer model; daily mint and burn
+      windows.
+    url: https://www.matrixdock.com
+
+  - id: truefi_us_treasury
+    protocol: TrueFi
+    product: TrueFi Treasury Yield Vault
+    category: institutional_lending
+    chains: [ethereum]
+    current_apy: 5.4
+    tvl_usd: 28000000
+    audit_count: 2
+    audit_firms: [trail_of_bits, peckshield]
+    max_drawdown_1y: 0.04
+    lockup_days: 14
+    launched_at: 2023-04-18
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 0.85
+      lending_spread: 0.15
+    description: >
+      TrueFi's Treasury Yield Vault holds short-duration US Treasuries via a partner SPV and
+      lends excess liquidity to institutional borrowers on a short-tenor basis for incremental
+      spread. 14-day redemption window. KYC required for primary subscription, secondary
+      transfers between whitelisted wallets.
+    url: https://truefi.io
