@@ -35,7 +35,7 @@ MIN_TVL_USD = 5_000_000
 VOLATILE_AMM_MIN_TVL = 10_000_000  # tighter floor for IL-prone pools
 MIN_APY_PCT = 0.5  # filter out dormant pools with sub-0.5% APY
 MAX_PER_PROJECT = 3
-GLOBAL_MAX_POOLS = 45
+GLOBAL_MAX_POOLS = 70
 
 
 def make_id(project: str, chain: str, symbol: str) -> str:

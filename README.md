@@ -2,7 +2,7 @@
 
 **A vector-native yield-discovery system for crypto investors.** Built for the [Qdrant Hackathon 2026](https://try.qdrant.tech/hackathon-vsd).
 
-Cardinal lets a user describe their preferences once — through a structured form, three optional drawdown-scenario swipes, and one freeform sentence — and returns a diversified yield portfolio drawn from a 58-protocol catalog. The interesting part is what Cardinal **does not** do.
+Cardinal lets a user describe their preferences once — through a structured form, three optional drawdown-scenario swipes, and one freeform sentence — and returns a diversified yield portfolio drawn from a 83-protocol catalog. The interesting part is what Cardinal **does not** do.
 
 ## The thesis: keep the LLM out of the selection
 
@@ -93,11 +93,11 @@ For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (
 
 → `backend/app/optimizer.py`
 
-## Catalog (58 protocols, 4 lenses)
+## Catalog (83 protocols, 4 lenses)
 
 Ingested via two sources:
 
-- **DefiLlama `/yields/pools`** — filtered to a whitelisted set of 27 projects (Aave V3, Compound V3, Morpho Blue, SparkLend, Spark Savings, Pendle, Lido, Rocket Pool, Coinbase cbETH, ether.fi, Renzo, Kelp, Swell, Curve, Convex, Aerodrome, Velodrome, Uniswap V3, Yearn, Beefy, GMX V2, Kamino, Ethena, Sky, Frax, Fluid, Ondo). Round-robin selection ensures every project is represented before TVL ranking fills remaining slots. APY floor of 0.5% filters out dormant pools.
+- **DefiLlama `/yields/pools`** — filtered to a whitelisted set of 40 projects spanning lending (Aave V3, Compound V3, Morpho Blue, SparkLend, Fluid, Jupiter Lend, Kamino), savings/RWA (Spark Savings, Sky, Frax, Ondo, Usual, Reservoir), LSTs (Lido, Rocket Pool, cbETH, frxETH, Origin OETH, Jupiter Staked SOL, Sanctum Infinity, Swell swETH, Mantle), LRTs (ether.fi stake+liquid, Renzo, Kelp, Swell rswETH, Bedrock uniETH, Puffer), AMMs (Curve, Convex, Aerodrome, Velodrome, Uniswap V3, Balancer V3), yield aggregators (Yearn, Beefy, Gauntlet), perps LP (GMX V2), and fixed-rate (Pendle). Round-robin selection ensures every project is represented before TVL ranking fills remaining slots. APY floor of 0.5% filters dormant pools.
 
 - **Hand-curated YAML** — 15 RWA/CeFi products DefiLlama doesn't surface well: BlackRock BUIDL, Maple HY + Cash, Centrifuge Anemoy, Hashnote USYC, OpenEden TBILL, Mountain USDM, Franklin BENJI, Goldfinch Senior, Matrixdock STBT, TrueFi, Clearpool PGF500, Securitize BlackRock US Cash, WisdomTree WTGXX, Mantle mETH.
 

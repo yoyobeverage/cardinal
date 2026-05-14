@@ -461,6 +461,216 @@ PROTOCOL_META: dict[str, dict] = {
         ),
         "url": "https://app.kamino.finance",
     },
+    "jupiter-staked-sol": {
+        "category": Category.LST,
+        "audit_count": 3,
+        "audit_firms": ["ottersec", "neodyme", "kudelski_security"],
+        "launched_at": date(2024, 1, 30),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.035,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.85, "mev_capture": 0.15},
+        "description": (
+            "Jupiter's liquid staked SOL token (JupSOL). Stakes SOL through a curated validator set "
+            "with MEV-share kickbacks from Jito-style block construction. Yield runs slightly above "
+            "vanilla SOL staking due to the MEV uplift. Integrated across Solana lending and AMMs."
+        ),
+        "url": "https://jup.ag/staked-sol",
+    },
+    "jupiter-lend": {
+        "category": Category.LENDING,
+        "audit_count": 3,
+        "audit_firms": ["ottersec", "offside_labs", "kudelski_security"],
+        "launched_at": date(2024, 7, 15),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.04,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"lending_spread": 1.0},
+        "description": (
+            "Jupiter's lending market on Solana. Supports SOL, JupSOL, USDC, and major Solana LSTs. "
+            "Same team behind Jupiter Perps, so the lending side benefits from shared liquidation "
+            "infrastructure and JLP-flow rebates."
+        ),
+        "url": "https://jup.ag/lend",
+    },
+    "swell-liquid-staking": {
+        "category": Category.LST,
+        "audit_count": 3,
+        "audit_firms": ["chainsecurity", "sigma_prime", "halborn"],
+        "launched_at": date(2023, 4, 18),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.03,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 1.0},
+        "description": (
+            "Swell's liquid staked ETH (swETH), the LST product line distinct from the rswETH "
+            "restaking variant. Decentralized operator set, non-rebasing appreciating token. Yield "
+            "tracks ETH validator rewards minus a 10% protocol fee."
+        ),
+        "url": "https://www.swellnetwork.io/swETH",
+    },
+    "ether.fi-liquid": {
+        "category": Category.LRT,
+        "audit_count": 4,
+        "audit_firms": ["nethermind", "certik", "omniscia", "solidified"],
+        "launched_at": date(2024, 4, 1),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.05,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.4, "restaking_reward": 0.3, "lending_spread": 0.2, "amm_fees": 0.1},
+        "description": (
+            "ether.fi Liquid routes weETH into curated DeFi strategies (lending, LP, basis trades) on "
+            "top of base ETH staking + EigenLayer restaking. Returns typically 100-200 bps above "
+            "bare weETH at the cost of additional smart-contract surface area."
+        ),
+        "url": "https://app.ether.fi/liquid",
+    },
+    "usual-usd0": {
+        "category": Category.STABLECOIN_ISSUANCE,
+        "audit_count": 4,
+        "audit_firms": ["spearbit", "halborn", "cantina", "sherlock"],
+        "launched_at": date(2024, 7, 11),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.04,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"real_yield": 0.7, "points_airdrop": 0.3},
+        "description": (
+            "Usual issues USD0, a stablecoin fully backed by tokenized US Treasuries via Hashnote "
+            "USYC. Staking USD0 mints USD0++, a 4-year-locked bond that earns the underlying T-bill "
+            "yield plus USUAL token rewards. Headline yield is higher than competitors due to the "
+            "token incentive layer."
+        ),
+        "url": "https://usual.money",
+    },
+    "balancer-v3": {
+        "category": Category.STABLE_AMM,
+        "audit_count": 3,
+        "audit_firms": ["openzeppelin", "trail_of_bits", "certora"],
+        "launched_at": date(2024, 12, 5),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.05,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"amm_fees": 0.7, "emissions": 0.3},
+        "description": (
+            "Balancer V3 adds hooks for custom pool logic, simplified vault math, and partial-fee "
+            "mechanics. Live primarily on Base, deployed alongside the older V2 infrastructure. "
+            "LPs earn swap fees and BAL emissions."
+        ),
+        "url": "https://balancer.fi",
+    },
+    "bedrock-unieth": {
+        "category": Category.LRT,
+        "audit_count": 3,
+        "audit_firms": ["secure3", "peckshield", "trust_security"],
+        "launched_at": date(2024, 3, 21),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.06,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.4, "restaking_reward": 0.3, "points_airdrop": 0.3},
+        "description": (
+            "Bedrock's uniETH is a liquid restaking token on EigenLayer. RockX operates the "
+            "underlying validators. Available on Ethereum, BNB Chain, and Arbitrum, with Bedrock "
+            "Diamonds loyalty points layered on top of EigenLayer points."
+        ),
+        "url": "https://bedrock.technology",
+    },
+    "puffer-stake": {
+        "category": Category.LRT,
+        "audit_count": 4,
+        "audit_firms": ["sigma_prime", "chainsecurity", "code4rena", "nethermind"],
+        "launched_at": date(2024, 2, 1),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.05,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.5, "restaking_reward": 0.3, "points_airdrop": 0.2},
+        "description": (
+            "Puffer's pufETH combines liquid staking with EigenLayer restaking plus a Secure-Signer "
+            "and Anti-Slasher module that lets solo stakers join the operator set with only 1 ETH. "
+            "Stronger decentralization story than operator-curated LRTs."
+        ),
+        "url": "https://puffer.fi",
+    },
+    "gauntlet": {
+        "category": Category.YIELD_AGGREGATOR,
+        "audit_count": 3,
+        "audit_firms": ["openzeppelin", "spearbit", "trail_of_bits"],
+        "launched_at": date(2024, 9, 12),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.04,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"lending_spread": 0.5, "amm_fees": 0.3, "emissions": 0.2},
+        "description": (
+            "Gauntlet runs curated Morpho Blue MetaMorpho vaults on Base with active risk-parameter "
+            "tuning and asset allocation. The Gauntlet brand brings institutional risk modeling to "
+            "DeFi yield aggregation."
+        ),
+        "url": "https://gauntlet.network",
+    },
+    "origin-ether": {
+        "category": Category.LST,
+        "audit_count": 3,
+        "audit_firms": ["openzeppelin", "consensys_diligence", "narya"],
+        "launched_at": date(2023, 5, 9),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.03,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.7, "lending_spread": 0.2, "amm_fees": 0.1},
+        "description": (
+            "Origin OETH auto-allocates ETH across a curated basket of staking and restaking "
+            "strategies (Lido, Rocket Pool, Curve, Morpho). A wrapper-of-wrappers approach that "
+            "trades a small yield haircut for diversification across LST issuers."
+        ),
+        "url": "https://www.originprotocol.com/oeth",
+    },
+    "reservoir-protocol": {
+        "category": Category.STABLECOIN_ISSUANCE,
+        "audit_count": 2,
+        "audit_firms": ["spearbit", "code4rena"],
+        "launched_at": date(2024, 6, 20),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.04,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"real_yield": 0.5, "basis_trade": 0.3, "lending_spread": 0.2},
+        "description": (
+            "Reservoir issues rUSD, a yield-bearing stablecoin backed by a diversified mix of T-bills, "
+            "basis trades, and DeFi-native lending. Targets institutional treasuries with claimed "
+            "on-chain reserves and a programmable peg-stability module."
+        ),
+        "url": "https://reservoir.xyz",
+    },
+    "sanctum-infinity": {
+        "category": Category.LST,
+        "audit_count": 3,
+        "audit_firms": ["ottersec", "neodyme", "trail_of_bits"],
+        "launched_at": date(2024, 5, 8),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.04,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 0.85, "mev_capture": 0.15},
+        "description": (
+            "Sanctum's Infinity Pool is a Solana liquid-staking router. Users hold INF, a token that "
+            "auto-rebalances across multiple Solana LSTs (jupSOL, jitoSOL, mSOL, ...) to optimize "
+            "yield + slippage. Provides deep liquidity for the long tail of Solana LSTs."
+        ),
+        "url": "https://www.sanctum.so/infinity",
+    },
+    "frax-ether": {
+        "category": Category.LST,
+        "audit_count": 4,
+        "audit_firms": ["trail_of_bits", "code4rena", "chainsecurity", "peckshield"],
+        "launched_at": date(2023, 10, 24),
+        "lockup_days": 0,
+        "max_drawdown_1y": 0.03,
+        "tax_treatment": TaxTreatment.ORDINARY_INCOME,
+        "yield_source_mix": {"validator_commission": 1.0},
+        "description": (
+            "Frax ETH (frxETH / sfrxETH) is Frax Finance's ETH liquid-staking pair. frxETH is the "
+            "rebase-free 1:1 wrapper; sfrxETH is the auto-compounding staked variant. Higher yield "
+            "than Lido because Frax routes only the sfrxETH portion to validators, concentrating "
+            "rewards."
+        ),
+        "url": "https://frax.com/frax-ether",
+    },
 }
 
 
