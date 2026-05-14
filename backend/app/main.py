@@ -9,14 +9,18 @@ Day 4 surface:
 """
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import catalog, llm, optimizer, qdrant_client
 from app.schemas import Allocation, FormInput, QuerySpec
+
+UMAP_PATH = Path(__file__).parent.parent / "data" / "umap.json"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("cardinal")
@@ -66,6 +70,31 @@ def _run_query(spec: QuerySpec) -> list:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "catalog_size": len(catalog.load_catalog())}
+
+
+@app.get("/api/universe")
+def universe() -> list[dict]:
+    """Every catalog point with per-lens UMAP coords (for the scatter plot)."""
+    cat = catalog.load_catalog()
+    if not UMAP_PATH.exists():
+        return []
+    umap_data = json.loads(UMAP_PATH.read_text())
+
+    out: list[dict] = []
+    for pid, p in cat.items():
+        coords = {lens: m.get(pid) for lens, m in umap_data.items()}
+        if not all(c is not None for c in coords.values()):
+            continue
+        out.append({
+            "id": pid,
+            "protocol": p.protocol,
+            "product": p.product,
+            "category": p.category.value,
+            "current_apy": p.current_apy,
+            "tvl_usd": p.tvl_usd,
+            "coords": coords,
+        })
+    return out
 
 
 @app.post("/api/portfolio")

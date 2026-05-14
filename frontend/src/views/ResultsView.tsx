@@ -1,4 +1,8 @@
+import { useMemo, useState } from "react";
+
 import AllocationBar from "../components/AllocationBar";
+import LensScatter from "../components/LensScatter";
+import LensSelector from "../components/LensSelector";
 import type { Allocation } from "../types";
 
 interface Props {
@@ -6,7 +10,15 @@ interface Props {
   onBack: () => void;
 }
 
+const AVAILABLE_LENSES = ["narrative", "risk"];
+
 export default function ResultsView({ allocation, onBack }: Props) {
+  const [lens, setLens] = useState<string>("narrative");
+  const allocatedIds = useMemo(
+    () => new Set(allocation.positions.map((p) => p.protocol_id)),
+    [allocation.positions],
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -21,6 +33,22 @@ export default function ResultsView({ allocation, onBack }: Props) {
       </div>
 
       <AllocationBar positions={allocation.positions} />
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm text-zinc-400">Universe map · same portfolio, different lens</h3>
+          <LensSelector
+            lenses={AVAILABLE_LENSES}
+            current={lens}
+            onChange={setLens}
+          />
+        </div>
+        <LensScatter currentLens={lens} allocatedIds={allocatedIds} />
+        <p className="mt-2 text-xs text-zinc-500">
+          Highlighted dots are the {allocatedIds.size} protocols in your allocation. Switch lenses
+          to see how the same portfolio rearranges across orthogonal similarity axes.
+        </p>
+      </div>
 
       {allocation.extracted_concerns.length > 0 && (
         <div>
