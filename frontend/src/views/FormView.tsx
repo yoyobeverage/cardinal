@@ -17,10 +17,61 @@ interface FormDraft extends Omit<FormInput, "max_lockup_days"> {
   max_lockup_days: number | "" | null;
 }
 
+interface Persona {
+  label: string;
+  description: string;
+  preset: FormDraft;
+}
+
+const PERSONAS: Persona[] = [
+  {
+    label: "House-buyer (anchor trauma)",
+    description: "Mid-size capital, 12 months, needs liquidity, scarred by Anchor",
+    preset: {
+      capital_usd: 100_000,
+      horizon_months: 12,
+      tax_wrapper: "taxable",
+      excluded_chains: [],
+      min_audit_count: 2,
+      min_tvl_usd: 0,
+      max_lockup_days: 270,
+      freeform: "I got rugged by Anchor in 2022. I need real liquidity by month 10 because I'm buying a house.",
+    },
+  },
+  {
+    label: "Conservative retiree",
+    description: "Large IRA, 36 months, T-bills only, max safety",
+    preset: {
+      capital_usd: 500_000,
+      horizon_months: 36,
+      tax_wrapper: "traditional_ira",
+      excluded_chains: ["solana", "bsc"],
+      min_audit_count: 3,
+      min_tvl_usd: 50_000_000,
+      max_lockup_days: 30,
+      freeform: "I cannot lose principal. T-bills and the most audited stablecoin yields only.",
+    },
+  },
+  {
+    label: "Degen seeker",
+    description: "Small bag, 6 months, points and emissions over safety",
+    preset: {
+      capital_usd: 10_000,
+      horizon_months: 6,
+      tax_wrapper: "taxable",
+      excluded_chains: [],
+      min_audit_count: 0,
+      min_tvl_usd: 0,
+      max_lockup_days: null,
+      freeform: "Max yield, I know the risks. Give me points, emissions, LRTs, basis trade — the spicy stuff.",
+    },
+  },
+];
+
 export default function FormView({ onAllocation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit } = useForm<FormDraft>({
+  const { register, handleSubmit, reset } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
       horizon_months: 12,
@@ -66,6 +117,24 @@ export default function FormView({ onAllocation }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="rounded border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-2 text-sm text-zinc-400">Or start from a sample persona:</div>
+        <div className="flex flex-wrap gap-2">
+          {PERSONAS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => reset(p.preset)}
+              className="rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-left text-sm hover:border-emerald-500"
+              title={p.description}
+            >
+              <div className="font-medium text-zinc-200">{p.label}</div>
+              <div className="text-xs text-zinc-500">{p.description}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className={labelCls}>
           <span className={labelTextCls}>Capital (USD)</span>

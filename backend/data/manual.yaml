@@ -222,3 +222,112 @@ protocols:
       spread. 14-day redemption window. KYC required for primary subscription, secondary
       transfers between whitelisted wallets.
     url: https://truefi.io
+
+  - id: maple_cash_management
+    protocol: Maple Finance
+    product: Cash Management Pool
+    category: institutional_lending
+    chains: [ethereum, base]
+    current_apy: 5.1
+    tvl_usd: 220000000
+    audit_count: 3
+    audit_firms: [trail_of_bits, peckshield, three_sigma]
+    max_drawdown_1y: 0.005
+    lockup_days: 0
+    launched_at: 2024-02-08
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      Maple's Cash Management Pool holds short-dated US Treasury Bills through a registered
+      partner SPV with no leverage and no credit exposure. Daily liquidity, no lockup. Open to
+      qualified non-US investors and US accredited investors via Securitize. The lower-risk
+      sister to Maple's High Yield Secured pool.
+    url: https://maple.finance/cash-management
+
+  - id: clearpool_pgf500_usdc
+    protocol: Clearpool
+    product: PGF500 USDC Permissionless Pool
+    category: institutional_lending
+    chains: [ethereum, optimism, polygon, base]
+    current_apy: 8.6
+    tvl_usd: 32000000
+    audit_count: 2
+    audit_firms: [certik, peckshield]
+    max_drawdown_1y: 0.06
+    lockup_days: 0
+    launched_at: 2022-09-15
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      lending_spread: 1.0
+    description: >
+      Clearpool's permissionless lending pools let institutional borrowers (e.g. PGF500 prop trading)
+      raise unsecured USDC liquidity from on-chain depositors. Borrowers post identity KYC; lenders
+      remain permissionless. Open redemption when pool utilization < 99%. Higher yield reflects the
+      unsecured nature of the credit.
+    url: https://clearpool.finance
+
+  - id: securitize_blackrock_uscash
+    protocol: Securitize
+    product: Securitize US Cash Management Fund
+    category: rwa_treasury
+    chains: [ethereum, arbitrum, base]
+    current_apy: 5.05
+    tvl_usd: 180000000
+    audit_count: 1
+    audit_firms: [openzeppelin]
+    max_drawdown_1y: 0.002
+    lockup_days: 0
+    launched_at: 2024-09-10
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      Securitize-managed feeder fund into Apollo's Diversified Credit Securitize Fund and similar
+      institutional cash-equivalent vehicles. Daily NAV computed off-chain; mint/burn settles
+      within one US business day. Restricted to qualified investors with completed KYC through the
+      Securitize platform. Used by DAO treasuries as on-chain cash reserves.
+    url: https://securitize.io
+
+  - id: wisdomtree_wtgxx
+    protocol: WisdomTree Prime
+    product: WTGXX Government Money Market Fund
+    category: rwa_treasury
+    chains: [ethereum, optimism, base, arbitrum]
+    current_apy: 5.15
+    tvl_usd: 95000000
+    audit_count: 0
+    audit_firms: []
+    max_drawdown_1y: 0.001
+    lockup_days: 0
+    launched_at: 2023-10-04
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      real_yield: 1.0
+    description: >
+      WisdomTree Government Money Market Digital Fund, a SEC-registered 40-Act fund whose share
+      class is tokenized on multiple chains. Holds 100% short-duration US government securities
+      and repos. Accessible to US persons through the WisdomTree Prime app. Among the only
+      tokenized RWA products freely available to retail US investors.
+    url: https://www.wisdomtree.com/investments/digital-funds/wtgxx
+
+  - id: mantle_meth
+    protocol: Mantle
+    product: mETH (Mantle Staked ETH)
+    category: lst
+    chains: [ethereum]
+    current_apy: 3.05
+    tvl_usd: 460000000
+    audit_count: 3
+    audit_firms: [omniscia, secure3, hexens]
+    max_drawdown_1y: 0.03
+    lockup_days: 0
+    launched_at: 2023-12-15
+    tax_treatment: ordinary_income
+    yield_source_mix:
+      validator_commission: 1.0
+    description: >
+      Mantle's flagship liquid staking token. Underlying ETH is staked via a curated permissioned
+      operator set with the Mantle Treasury as economic insurance. mETH is bridge-mintable on
+      Mantle Network. Slightly higher yield than Lido due to a thinner protocol fee.
+    url: https://www.mantle.xyz/meth

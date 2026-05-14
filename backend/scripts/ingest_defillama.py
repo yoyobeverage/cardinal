@@ -33,8 +33,9 @@ ALLOWED_CHAINS: dict[str, Chain] = {
 
 MIN_TVL_USD = 5_000_000
 VOLATILE_AMM_MIN_TVL = 10_000_000  # tighter floor for IL-prone pools
-MAX_PER_PROJECT = 2
-GLOBAL_MAX_POOLS = 30
+MIN_APY_PCT = 0.5  # filter out dormant pools with sub-0.5% APY
+MAX_PER_PROJECT = 3
+GLOBAL_MAX_POOLS = 45
 
 
 def make_id(project: str, chain: str, symbol: str) -> str:
@@ -83,7 +84,7 @@ def filter_pools(pools: list[dict]) -> list[dict]:
         if tvl < MIN_TVL_USD:
             continue
         apy = p.get("apy")
-        if apy is None or apy <= 0 or apy >= 100:
+        if apy is None or apy < MIN_APY_PCT or apy >= 100:
             continue
 
         meta = PROTOCOL_META[p["project"]]
