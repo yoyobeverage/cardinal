@@ -1,0 +1,10 @@
+{
+  "capital_usd": 100000,
+  "horizon_months": 12,
+  "tax_wrapper": "taxable",
+  "excluded_chains": [],
+  "min_audit_count": 2,
+  "min_tvl_usd": 0,
+  "max_lockup_days": 270,
+  "freeform": "I got rugged by Anchor in 2022. I need real liquidity by month 10 because I'm buying a house."
+}
