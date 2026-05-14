@@ -1,4 +1,11 @@
 import { useEffect } from "react";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+} from "recharts";
 
 import type { Position } from "../types";
 
@@ -27,7 +34,8 @@ export default function DrilldownDrawer({ position, onClose }: Props) {
 
   const radarData = Object.entries(position.per_lens_scores).map(([lens, score]) => ({
     lens: LENS_LABEL[lens] ?? lens,
-    score: Math.max(0, Math.min(1, score)),
+    score: Math.max(0, Math.min(1, score)) * 100,
+    fullMark: 100,
   }));
 
   const p = position.payload;
@@ -76,25 +84,47 @@ export default function DrilldownDrawer({ position, onClose }: Props) {
           {radarData.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm text-zinc-400">Per-lens similarity to your anchors</h3>
-              <div className="space-y-2 rounded border border-zinc-800 bg-zinc-900 p-4">
-                {radarData.map((d) => (
-                  <div key={d.lens}>
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="text-zinc-300">{d.lens}</span>
-                      <span className="font-mono text-zinc-400">{d.score.toFixed(2)}</span>
+              {radarData.length >= 3 ? (
+                <div className="flex justify-center rounded border border-zinc-800 bg-zinc-900 p-2">
+                  <RadarChart width={420} height={280} data={radarData}>
+                    <PolarGrid stroke="#3f3f46" />
+                    <PolarAngleAxis dataKey="lens" tick={{ fill: "#a1a1aa", fontSize: 12 }} />
+                    <PolarRadiusAxis
+                      angle={90}
+                      domain={[0, 100]}
+                      tick={{ fill: "#52525b", fontSize: 10 }}
+                      tickCount={5}
+                    />
+                    <Radar
+                      name="similarity"
+                      dataKey="score"
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.4}
+                      isAnimationActive={false}
+                    />
+                  </RadarChart>
+                </div>
+              ) : (
+                <div className="space-y-2 rounded border border-zinc-800 bg-zinc-900 p-4">
+                  {radarData.map((d) => (
+                    <div key={d.lens}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-zinc-300">{d.lens}</span>
+                        <span className="font-mono text-zinc-400">{d.score.toFixed(2)}</span>
+                      </div>
+                      <div className="h-2 rounded bg-zinc-800">
+                        <div
+                          className="h-full rounded bg-emerald-500"
+                          style={{ width: `${d.score * 100}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 rounded bg-zinc-800">
-                      <div
-                        className="h-full rounded bg-emerald-500"
-                        style={{ width: `${d.score * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               <p className="mt-1 text-xs text-zinc-500">
                 Similarity to your anchor set on each lens, normalized to [0, 1].
-                {radarData.length < 3 && " (Radar visualization unlocks once 3+ lenses are built.)"}
               </p>
             </div>
           )}

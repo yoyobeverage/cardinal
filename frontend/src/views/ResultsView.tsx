@@ -12,7 +12,7 @@ interface Props {
   onBack: () => void;
 }
 
-const AVAILABLE_LENSES = ["narrative", "risk"];
+const AVAILABLE_LENSES = ["narrative", "risk", "yield_source"];
 
 export default function ResultsView({ allocation, onBack }: Props) {
   const [lens, setLens] = useState<string>("narrative");

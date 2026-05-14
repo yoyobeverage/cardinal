@@ -27,6 +27,23 @@ CACHE_PATH = Path(__file__).parent.parent / "data" / "cache.sqlite"
 VECTORS_PATH = Path(__file__).parent.parent / "data" / "vectors.json"
 NARRATIVE_MODEL = "BAAI/bge-large-en-v1.5"
 
+# Positional index order for the yield_source vector. First 11 slots map to the
+# YieldSource enum values; last 5 are reserved padding so the vector is 16d.
+YIELD_SOURCE_ORDER = [
+    "real_yield",
+    "lending_spread",
+    "amm_fees",
+    "options_premium",
+    "points_airdrop",
+    "emissions",
+    "mev_capture",
+    "basis_trade",
+    "restaking_reward",
+    "stablecoin_issuance",
+    "validator_commission",
+]
+YIELD_SOURCE_DIM = 16
+
 AUDIT_FIRM_SCORES: dict[str, float] = {
     "trail_of_bits": 0.95, "openzeppelin": 0.95, "consensys_diligence": 0.9,
     "chainsecurity": 0.9, "certora": 0.9, "runtime_verification": 0.9,
@@ -150,6 +167,18 @@ def build_risk(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]
     return out
 
 
+def build_yield_source(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]]:
+    """Soft one-hot of yield_source_mix in YIELD_SOURCE_ORDER. 16d cosine."""
+    out: dict[str, list[float]] = {}
+    for pid, p in catalog:
+        v = [0.0] * YIELD_SOURCE_DIM
+        for source, weight in p.yield_source_mix.items():
+            if source in YIELD_SOURCE_ORDER:
+                v[YIELD_SOURCE_ORDER.index(source)] = float(weight)
+        out[pid] = v
+    return out
+
+
 def main() -> int:
     print(f"Loading catalog from {CACHE_PATH} ...")
     catalog = load_catalog()
@@ -165,7 +194,12 @@ def main() -> int:
     dim_risk = len(next(iter(risk.values())))
     print(f"  {len(risk)} risk vectors x {dim_risk}d")
 
-    output = {"narrative": narrative, "risk": risk}
+    print("\nBuilding yield_source vector (16d, soft one-hot)...")
+    yield_source = build_yield_source(catalog)
+    dim_ys = len(next(iter(yield_source.values())))
+    print(f"  {len(yield_source)} yield_source vectors x {dim_ys}d")
+
+    output = {"narrative": narrative, "risk": risk, "yield_source": yield_source}
 
     VECTORS_PATH.parent.mkdir(exist_ok=True)
     with open(VECTORS_PATH, "w") as fh:
