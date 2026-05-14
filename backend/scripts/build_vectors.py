@@ -44,6 +44,32 @@ YIELD_SOURCE_ORDER = [
 ]
 YIELD_SOURCE_DIM = 16
 
+# Correlation vector — 8d cosine. Index order:
+#   [BTC, ETH, SPX, IEF, HYG, DXY, GOLD, USDC_rate]
+# Values are eyeballed expected 1y rolling Pearson correlations per category.
+# In a fuller build these would be computed from real historical APY series;
+# for the hackathon we use category-defaults so the lens still produces
+# meaningful clusters: T-bills with savings rates (IEF/USDC_rate), LSTs with
+# LRTs (ETH-heavy), AMMs/perps/options together (BTC+ETH beta), stable AMMs
+# near zero.
+CORRELATION_DIM = 8
+CATEGORY_DEFAULT_CORRELATION: dict[str, list[float]] = {
+    "lending":               [0.30, 0.40, 0.20,  0.00, 0.30, -0.10, 0.00, 0.40],
+    "fixed_rate":            [0.20, 0.30, 0.10,  0.10, 0.20,  0.00, 0.00, 0.30],
+    "lst":                   [0.50, 0.95, 0.30,  0.00, 0.20, -0.20, 0.00, 0.10],
+    "lrt":                   [0.50, 0.95, 0.30,  0.00, 0.20, -0.20, 0.00, 0.10],
+    "stable_amm":            [0.10, 0.10, 0.05,  0.00, 0.10,  0.00, 0.00, 0.10],
+    "volatile_amm":          [0.65, 0.70, 0.35, -0.10, 0.30, -0.20, 0.00, 0.00],
+    "options_vault":         [0.70, 0.60, 0.30,  0.00, 0.30, -0.20, 0.00, 0.00],
+    "rwa_treasury":          [0.00, 0.00, 0.20,  0.85, 0.50,  0.10, 0.00, 0.95],
+    "institutional_lending": [0.10, 0.10, 0.30,  0.50, 0.70,  0.00, 0.00, 0.70],
+    "perps_lp":              [0.65, 0.70, 0.30, -0.10, 0.30, -0.20, 0.00, 0.00],
+    "basis_trade":           [0.40, 0.50, 0.20,  0.00, 0.30, -0.10, 0.00, 0.30],
+    "yield_aggregator":      [0.30, 0.40, 0.20,  0.10, 0.30, -0.10, 0.00, 0.30],
+    "savings_rate":          [0.00, 0.00, 0.10,  0.80, 0.40,  0.10, 0.00, 0.95],
+    "stablecoin_issuance":   [0.20, 0.30, 0.10,  0.20, 0.30, -0.10, 0.00, 0.50],
+}
+
 AUDIT_FIRM_SCORES: dict[str, float] = {
     "trail_of_bits": 0.95, "openzeppelin": 0.95, "consensys_diligence": 0.9,
     "chainsecurity": 0.9, "certora": 0.9, "runtime_verification": 0.9,
@@ -179,6 +205,19 @@ def build_yield_source(catalog: list[tuple[str, PointPayload]]) -> dict[str, lis
     return out
 
 
+def build_correlation(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]]:
+    """8d cosine vector per protocol using category-default correlations.
+
+    Future work: pull DefiLlama /chart/{pool_id} historical APY and compute
+    actual rolling correlations vs the 8 reference asset return series.
+    """
+    out: dict[str, list[float]] = {}
+    default = [0.0] * CORRELATION_DIM
+    for pid, p in catalog:
+        out[pid] = list(CATEGORY_DEFAULT_CORRELATION.get(p.category.value, default))
+    return out
+
+
 def main() -> int:
     print(f"Loading catalog from {CACHE_PATH} ...")
     catalog = load_catalog()
@@ -199,7 +238,17 @@ def main() -> int:
     dim_ys = len(next(iter(yield_source.values())))
     print(f"  {len(yield_source)} yield_source vectors x {dim_ys}d")
 
-    output = {"narrative": narrative, "risk": risk, "yield_source": yield_source}
+    print("\nBuilding correlation vector (8d, category-default fallback)...")
+    correlation = build_correlation(catalog)
+    dim_c = len(next(iter(correlation.values())))
+    print(f"  {len(correlation)} correlation vectors x {dim_c}d")
+
+    output = {
+        "narrative": narrative,
+        "risk": risk,
+        "yield_source": yield_source,
+        "correlation": correlation,
+    }
 
     VECTORS_PATH.parent.mkdir(exist_ok=True)
     with open(VECTORS_PATH, "w") as fh:
