@@ -21,6 +21,14 @@ from app import catalog, llm, optimizer, qdrant_client
 from app.schemas import Allocation, FormInput, QuerySpec
 
 UMAP_PATH = Path(__file__).parent.parent / "data" / "umap.json"
+VECTORS_PATH = Path(__file__).parent.parent / "data" / "vectors.json"
+
+
+def _correlation_vectors() -> dict[str, list[float]]:
+    if not VECTORS_PATH.exists():
+        return {}
+    data = json.loads(VECTORS_PATH.read_text())
+    return data.get("correlation", {})
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("cardinal")
@@ -124,8 +132,10 @@ def _attach_per_lens_scores(positions: list, anchor_ids: list[str]) -> list:
 
 
 @app.post("/api/portfolio")
-def portfolio(form: FormInput) -> Allocation:
-    log.info("portfolio: capital=$%s freeform=%r", form.capital_usd, form.freeform[:80])
+def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocation:
+    """Optimizer choice via ?optimizer_name=weighted_sum|mean_variance."""
+    log.info("portfolio: capital=$%s optimizer=%s freeform=%r",
+             form.capital_usd, optimizer_name, form.freeform[:80])
 
     spec = llm.translate(form)
     log.info(
@@ -139,9 +149,16 @@ def portfolio(form: FormInput) -> Allocation:
     candidates = _run_query(spec)
     log.info("qdrant: %d candidates", len(candidates))
 
-    positions = optimizer.weighted_sum(candidates, form.capital_usd)
+    if optimizer_name == "mean_variance":
+        positions = optimizer.mean_variance(
+            candidates, _correlation_vectors(), form.capital_usd,
+        )
+    else:
+        positions = optimizer.weighted_sum(candidates, form.capital_usd)
+
     positions = _attach_per_lens_scores(positions, spec.positive_anchors)
-    log.info("optimizer: %d positions, weights=%s", len(positions), [round(p.weight, 3) for p in positions])
+    log.info("optimizer=%s -> %d positions, weights=%s",
+             optimizer_name, len(positions), [round(p.weight, 3) for p in positions])
 
     allocation = Allocation(
         positions=positions,

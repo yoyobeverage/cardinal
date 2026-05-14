@@ -1,9 +1,22 @@
-"""Portfolio optimizer. Day 4 ships weighted-sum; mean-variance is Day 14 stretch."""
+"""Portfolio optimizers.
+
+- weighted_sum: ships as the default. Allocates inversely to drawdown, scaled
+  by Qdrant similarity score.
+- mean_variance: Markowitz minimum-variance subject to an expected-return floor.
+  Covariance approximated by the pairwise cosine-similarity matrix of the
+  protocols' correlation vectors. Math-Econ flex for Day 14.
+"""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
+import numpy as np
+from scipy.optimize import minimize
+
 from app.schemas import PointPayload, Position
+
+log = logging.getLogger(__name__)
 
 
 def weighted_sum(
@@ -68,6 +81,96 @@ def weighted_sum(
             per_lens_scores={},
         )
         for w, p, c in zip(capped, payloads, top)
+    ]
+    positions.sort(key=lambda x: -x.weight)
+    return positions
+
+
+def mean_variance(
+    candidates: list[Any],
+    correlation_vectors: dict[str, list[float]],
+    capital_usd: float,
+    max_position_pct: float = 0.25,
+    target_count: int = 8,
+    return_floor_frac: float = 0.6,
+) -> list[Position]:
+    """Markowitz min-variance subject to a return floor.
+
+    Objective: minimize w^T Σ w
+    Subject to:
+      w^T r >= return_floor (= return_floor_frac * mean candidate APY)
+      sum(w) = 1
+      0 <= w_i <= max_position_pct
+
+    Σ is the pairwise cosine-similarity matrix of normalized correlation
+    vectors — a stand-in for the actual covariance matrix, which would
+    require historical return data we don't have at hackathon scope.
+
+    Falls back to weighted_sum on solver failure or missing correlation data.
+    """
+    if not candidates:
+        return []
+    top = candidates[:target_count]
+    payloads = [PointPayload(**c.payload) for c in top]
+    n = len(payloads)
+
+    returns = np.array([p.current_apy / 100.0 for p in payloads])
+
+    corr_matrix = np.array([
+        correlation_vectors.get(p.id, [0.0] * 8) for p in payloads
+    ])
+    if corr_matrix.shape[1] == 0 or np.all(corr_matrix == 0):
+        log.warning("mean_variance: no correlation data; falling back to weighted_sum")
+        return weighted_sum(candidates, capital_usd, max_position_pct, target_count)
+
+    norms = np.linalg.norm(corr_matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    corr_norm = corr_matrix / norms
+    sigma = corr_norm @ corr_norm.T  # pairwise cosine similarity, n x n
+    sigma = sigma + 1e-6 * np.eye(n)  # tiny diagonal jitter for solver stability
+
+    return_floor = float(np.mean(returns) * return_floor_frac)
+
+    def objective(w: np.ndarray) -> float:
+        return float(w @ sigma @ w)
+
+    constraints = [
+        {"type": "eq", "fun": lambda w: float(np.sum(w) - 1.0)},
+        {"type": "ineq", "fun": lambda w: float(returns @ w - return_floor)},
+    ]
+    bounds = [(0.0, max_position_pct) for _ in range(n)]
+    w0 = np.full(n, 1.0 / n)
+
+    result = minimize(
+        objective, w0,
+        method="SLSQP",
+        constraints=constraints,
+        bounds=bounds,
+        options={"maxiter": 200, "ftol": 1e-9},
+    )
+
+    if not result.success:
+        log.warning("mean_variance: SLSQP failed (%s); falling back to weighted_sum", result.message)
+        return weighted_sum(candidates, capital_usd, max_position_pct, target_count)
+
+    weights = result.x
+    # Numerical cleanup: clip tiny negatives, renormalize
+    weights = np.maximum(weights, 0.0)
+    total = weights.sum()
+    if total <= 0:
+        return weighted_sum(candidates, capital_usd, max_position_pct, target_count)
+    weights = weights / total
+
+    positions = [
+        Position(
+            protocol_id=p.id,
+            payload=p,
+            weight=float(w),
+            dollars=float(w * capital_usd),
+            score=float(c.score),
+            per_lens_scores={},
+        )
+        for w, p, c in zip(weights, payloads, top)
     ]
     positions.sort(key=lambda x: -x.weight)
     return positions

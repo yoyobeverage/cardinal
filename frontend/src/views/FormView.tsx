@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 
-import { fetchPortfolio } from "../api";
+import { fetchPortfolio, type OptimizerName } from "../api";
 import type { Allocation, Chain, FormInput, TaxWrapper } from "../types";
 
 const ALL_CHAINS: Chain[] = [
@@ -71,6 +71,7 @@ const PERSONAS: Persona[] = [
 export default function FormView({ onAllocation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [optimizer, setOptimizer] = useState<OptimizerName>("weighted_sum");
   const { register, handleSubmit, reset } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
@@ -101,7 +102,7 @@ export default function FormView({ onAllocation }: Props) {
             : Number(data.max_lockup_days),
         freeform: data.freeform,
       };
-      const alloc = await fetchPortfolio(payload);
+      const alloc = await fetchPortfolio(payload, optimizer);
       onAllocation(alloc);
     } catch (e) {
       setError(String(e));
@@ -221,6 +222,41 @@ export default function FormView({ onAllocation }: Props) {
           className={inputCls}
         />
       </label>
+
+      <div className="rounded border border-zinc-800 bg-zinc-900 p-3">
+        <div className="mb-2 text-sm text-zinc-400">Optimizer</div>
+        <div className="inline-flex rounded border border-zinc-700 bg-zinc-950 p-1">
+          <button
+            type="button"
+            onClick={() => setOptimizer("weighted_sum")}
+            className={
+              "rounded px-3 py-1 text-sm " +
+              (optimizer === "weighted_sum"
+                ? "bg-emerald-600 text-white"
+                : "text-zinc-400 hover:text-zinc-200")
+            }
+          >
+            Weighted sum
+          </button>
+          <button
+            type="button"
+            onClick={() => setOptimizer("mean_variance")}
+            className={
+              "rounded px-3 py-1 text-sm " +
+              (optimizer === "mean_variance"
+                ? "bg-emerald-600 text-white"
+                : "text-zinc-400 hover:text-zinc-200")
+            }
+          >
+            Mean-variance (Markowitz)
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          {optimizer === "weighted_sum"
+            ? "Score × 1/(1+drawdown), capped per-position. Default; respects qualitative preferences."
+            : "Min wᵀΣw subject to a return floor. Pure variance minimization; can produce surprising diversifications."}
+        </p>
+      </div>
 
       {error && (
         <div className="rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-300">
