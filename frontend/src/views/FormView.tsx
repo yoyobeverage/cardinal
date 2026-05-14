@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 
 import { fetchPortfolio, type OptimizerName } from "../api";
-import type { Allocation, Chain, FormInput, TaxWrapper } from "../types";
+import DrawdownSwipeStack from "../components/DrawdownSwipe";
+import type { Allocation, Chain, DrawdownSwipe, FormInput, TaxWrapper } from "../types";
 
 const ALL_CHAINS: Chain[] = [
   "ethereum", "base", "arbitrum", "optimism", "polygon", "solana", "bsc", "avalanche",
@@ -72,6 +73,7 @@ export default function FormView({ onAllocation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [optimizer, setOptimizer] = useState<OptimizerName>("weighted_sum");
+  const [swipes, setSwipes] = useState<DrawdownSwipe[]>([]);
   const { register, handleSubmit, reset } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
@@ -100,6 +102,7 @@ export default function FormView({ onAllocation }: Props) {
           data.max_lockup_days === "" || data.max_lockup_days == null
             ? null
             : Number(data.max_lockup_days),
+        drawdown_swipes: swipes.length > 0 ? swipes : null,
         freeform: data.freeform,
       };
       const alloc = await fetchPortfolio(payload, optimizer);
@@ -212,6 +215,8 @@ export default function FormView({ onAllocation }: Props) {
           ))}
         </div>
       </fieldset>
+
+      <DrawdownSwipeStack decisions={swipes} onChange={setSwipes} />
 
       <label className={labelCls}>
         <span className={labelTextCls}>Anything else worth knowing? (optional)</span>

@@ -17,6 +17,11 @@ export type TaxTreatment =
 
 export type TaxWrapper = "taxable" | "traditional_ira" | "roth_ira" | "hsa";
 
+export interface DrawdownSwipe {
+  scenario_id: string;
+  decision: "held" | "sold";
+}
+
 export interface PointPayload {
   id: string;
   protocol: string;
@@ -44,6 +49,7 @@ export interface FormInput {
   min_audit_count: number;
   min_tvl_usd: number;
   max_lockup_days: number | null;
+  drawdown_swipes?: DrawdownSwipe[] | null;
   freeform: string;
 }
 

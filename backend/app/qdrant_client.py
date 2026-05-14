@@ -214,6 +214,42 @@ def lens_query(
     ).points
 
 
+def discovery_walk(
+    swipe_pairs: Sequence[tuple[str, str]],
+    using: str = "risk",
+    hard_filters: HardFilters | None = None,
+    limit: int = 10,
+) -> list:
+    """Qdrant Discovery API. Each (pos_id, neg_id) pair tells Qdrant "closer to
+    pos, farther from neg" on the given lens. Returns up to `limit` protocols
+    whose vector profile best matches the revealed preferences.
+
+    Used by Day 13's drawdown-swipe stack: each scenario decision becomes one
+    ContextPair on the risk axis.
+    """
+    if not swipe_pairs:
+        return []
+    client = get_client()
+    context = [
+        qm.ContextPair(
+            positive=point_uuid(pos),
+            negative=point_uuid(neg),
+        )
+        for pos, neg in swipe_pairs
+    ]
+    # Context-only mode (no target vector) -> ContextQuery, not DiscoverQuery.
+    # Qdrant's DiscoverQuery requires a target; ContextQuery accepts pairs only
+    # and returns points consistent with the steering direction they imply.
+    return client.query_points(
+        collection_name=COLLECTION,
+        query=qm.ContextQuery(context=context),
+        using=using,
+        query_filter=build_filter(hard_filters) if hard_filters else None,
+        limit=limit,
+        with_payload=True,
+    ).points
+
+
 def per_lens_similarity(point_id: str, anchor_ids: Sequence[str]) -> dict[str, float]:
     """Returns {lens_name: raw_similarity_score} for a single point vs averaged anchors.
 

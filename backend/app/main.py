@@ -30,6 +30,28 @@ def _correlation_vectors() -> dict[str, list[float]]:
     data = json.loads(VECTORS_PATH.read_text())
     return data.get("correlation", {})
 
+
+# scenario_id -> (held_anchor_protocol_id, sold_anchor_protocol_id)
+# Mirrors the SCENARIOS array in frontend/src/components/DrawdownSwipe.tsx.
+SCENARIO_ANCHORS: dict[str, tuple[str, str]] = {
+    "terra":          ("ethena-usde_ethereum_susde",   "ondo-yield-assets_ethereum_usdy"),
+    "ftx":            ("blackrock_buidl",              "sparklend_ethereum_usds"),
+    "usdc_depeg":     ("spark-savings_ethereum_usdc",  "ondo-yield-assets_ethereum_usdy"),
+    "steth_discount": ("lido_ethereum_steth",          "rocket-pool_ethereum_reth"),
+    "btc_drawdown":   ("ether_fi-stake_ethereum_weeth","ondo-yield-assets_ethereum_usdy"),
+}
+
+
+def _swipes_to_context_pairs(swipes) -> list[tuple[str, str]]:
+    """DrawdownSwipe decisions -> (positive_id, negative_id) pairs for Discovery API."""
+    pairs: list[tuple[str, str]] = []
+    for s in swipes:
+        if s.scenario_id not in SCENARIO_ANCHORS:
+            continue
+        held, sold = SCENARIO_ANCHORS[s.scenario_id]
+        pairs.append((held, sold) if s.decision == "held" else (sold, held))
+    return pairs
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("cardinal")
 
@@ -145,6 +167,21 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
         spec.lens_weights.model_dump(),
         spec.extracted_concerns,
     )
+
+    # If the user answered drawdown-swipe scenarios, run a Discovery API walk on
+    # the risk axis and prepend whatever it surfaces to spec.positive_anchors so
+    # the main recommend reflects the revealed risk tolerance.
+    if form.drawdown_swipes:
+        pairs = _swipes_to_context_pairs(form.drawdown_swipes)
+        if pairs:
+            try:
+                discovery = qdrant_client.discovery_walk(pairs, using="risk", limit=5)
+                discovered = [p.payload["id"] for p in discovery if p.payload]
+                merged = list(dict.fromkeys(discovered + spec.positive_anchors))
+                log.info("discovery_walk surfaced %s; final anchors=%s", discovered, merged)
+                spec.positive_anchors = merged
+            except Exception:
+                log.exception("discovery_walk failed; continuing without swipe anchors")
 
     candidates = _run_query(spec)
     log.info("qdrant: %d candidates", len(candidates))
