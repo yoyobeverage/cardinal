@@ -86,8 +86,8 @@ The optional drawdown-swipe onboarding presents 5 historical events (Terra/Luna 
 
 Both operate on the same Qdrant candidate set; the frontend has a toggle so the demo can compare them side by side.
 
-- **Weighted-sum** (default) — `score × 1/(1 + max_drawdown_1y)`, cap each position at 25%, redistribute excess uniformly across non-capped positions. Risk-tilted, respects the qualitative preferences encoded in the candidate ranking.
-- **Mean-variance (Markowitz)** — scipy SLSQP solves `min wᵀΣw  s.t.  wᵀr ≥ floor,  sum(w) = 1,  0 ≤ wᵢ ≤ cap`. Σ approximated by the pairwise cosine-similarity matrix of correlation vectors, since we don't have real historical return series at hackathon scope. Pure variance minimization; can produce surprising diversifications.
+- **Weighted-sum** (default) — `score × 1/(1 + max_drawdown_1y) × tax_multiplier`, cap each position at 25%, redistribute excess uniformly across non-capped positions. Risk-tilted, asset-location-aware (boosts ordinary-income yields inside IRA/HSA wrappers; boosts qualified-dividend/cap-gain/QBI products in taxable accounts; penalizes ordinary-income in taxable). Respects the qualitative preferences encoded in the candidate ranking.
+- **Mean-variance (Markowitz)** — scipy SLSQP solves `min wᵀΣw  s.t.  wᵀr ≥ floor,  sum(w) = 1,  0 ≤ wᵢ ≤ cap`. Σ approximated by the pairwise cosine-similarity matrix of correlation vectors, since we don't have real historical return series at hackathon scope. Pure variance minimization; can produce surprising diversifications. Not tax-aware (tax-aware Markowitz is a research area).
 
 For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (4.14% portfolio APY); mean-variance returns 1 lending position at the 25% cap + 7 LSTs/LRTs equal-weighted at 10.7% (2.26% APY, exactly the return floor). Same candidate set, fundamentally different baskets.
 
@@ -181,7 +181,7 @@ Demo video link will appear here once recorded.
 
 - Replace the category-default correlation vector with actual rolling Pearson correlations computed from DefiLlama `/chart/{pool_id}` historical APY series
 - Populate the reserved `composability` vector via node2vec over the receipt-token graph (Pendle → underlying → Curve → …)
-- Add `tax_treatment` as a 12d categorical vector plus an IRA-aware optimizer post-step
+- Promote the tax_multiplier lookup to a full 12d `tax_treatment` vector so the lens swap can show a tax-axis projection
 - Frontend code-splitting — current bundle is ~680 KB, chart libraries are the main weight
 - Push catalog to 100+ protocols with manual additions for tokenized money-market funds, structured notes, and tax-advantaged products
 

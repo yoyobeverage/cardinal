@@ -1,10 +1,14 @@
 """Portfolio optimizers.
 
 - weighted_sum: ships as the default. Allocates inversely to drawdown, scaled
-  by Qdrant similarity score.
+  by Qdrant similarity score, with an optional tax_wrapper-aware multiplier
+  that mirrors real-world placement logic (ordinary-income yields are better
+  sheltered in IRAs; qualified-dividend / cap-gain products are better in
+  taxable accounts).
 - mean_variance: Markowitz minimum-variance subject to an expected-return floor.
   Covariance approximated by the pairwise cosine-similarity matrix of the
-  protocols' correlation vectors. Math-Econ flex for Day 14.
+  protocols' correlation vectors. Math-Econ flex for Day 14. Not tax-aware —
+  tax-aware Markowitz is a research area we don't tackle at hackathon scope.
 """
 from __future__ import annotations
 
@@ -19,17 +23,43 @@ from app.schemas import PointPayload, Position
 log = logging.getLogger(__name__)
 
 
+# (tax_wrapper, tax_treatment) -> multiplier applied before weight normalization.
+# Encodes the asset-location rule of thumb: ordinary-income yields belong in
+# tax-deferred accounts; qualified-dividend / cap-gain / return-of-capital
+# products belong in taxable accounts where the preferential rates kick in.
+_TAX_MULTIPLIER: dict[tuple[str, str], float] = {
+    ("traditional_ira", "ordinary_income"):     1.20,
+    ("roth_ira",        "ordinary_income"):     1.20,
+    ("hsa",             "ordinary_income"):     1.20,
+    ("taxable",         "qualified_dividend"):  1.20,
+    ("taxable",         "capital_gain"):        1.20,
+    ("taxable",         "return_of_capital"):   1.15,
+    ("taxable",         "qbi"):                 1.15,
+    ("taxable",         "ordinary_income"):     0.90,  # tax-drag penalty
+}
+
+
+def tax_multiplier(tax_wrapper: str, tax_treatment: str) -> float:
+    """Asset-location boost factor for (wrapper, treatment) combinations. 1.0 default."""
+    return _TAX_MULTIPLIER.get((tax_wrapper, tax_treatment), 1.0)
+
+
 def weighted_sum(
     candidates: list[Any],
     capital_usd: float,
     max_position_pct: float = 0.25,
     target_count: int = 8,
+    tax_wrapper: str = "taxable",
 ) -> list[Position]:
-    """Take top target_count candidates by Qdrant score, weight by (score x risk_factor),
-    cap each position at max_position_pct, redistribute excess to non-capped positions.
-    Returns Position list in descending weight order, summing to 1.0.
+    """Take top target_count candidates by Qdrant score, weight by
+    (score x risk_factor x tax_multiplier), cap each position at
+    max_position_pct, redistribute excess to non-capped positions. Returns
+    Position list in descending weight order, summing to 1.0.
 
     risk_factor = 1 / (1 + max_drawdown_1y), so lower-drawdown protocols get larger weight.
+    tax_multiplier = lookup on (tax_wrapper, payload.tax_treatment) — boosts ordinary-income
+    products in IRA/HSA wrappers and qualified-dividend / cap-gain / qbi products in taxable
+    accounts. Default 1.0 for unmatched combinations.
     Qdrant scores are normalized via max(score, 0) so Euclidean (which can be >0) and cosine
     (which can be negative for dissimilar pairs) both produce non-negative weighting.
     """
@@ -43,7 +73,8 @@ def weighted_sum(
     for cand, p in zip(top, payloads):
         sim = max(float(cand.score), 0.0)
         risk_factor = 1.0 / (1.0 + p.max_drawdown_1y)
-        raw.append(sim * risk_factor)
+        tax_mult = tax_multiplier(tax_wrapper, p.tax_treatment.value)
+        raw.append(sim * risk_factor * tax_mult)
 
     total = sum(raw)
     if total <= 0:

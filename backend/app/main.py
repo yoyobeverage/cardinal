@@ -191,7 +191,10 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
             candidates, _correlation_vectors(), form.capital_usd,
         )
     else:
-        positions = optimizer.weighted_sum(candidates, form.capital_usd)
+        positions = optimizer.weighted_sum(
+            candidates, form.capital_usd,
+            tax_wrapper=form.tax_wrapper.value,
+        )
 
     positions = _attach_per_lens_scores(positions, spec.positive_anchors)
     log.info("optimizer=%s -> %d positions, weights=%s",

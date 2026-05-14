@@ -11,6 +11,7 @@ def _mock_candidate(
     max_dd: float = 0.05,
     apy: float = 5.0,
     tvl: int = 100_000_000,
+    tax_treatment: str = TaxTreatment.ORDINARY_INCOME.value,
 ):
     """Build a mock qdrant ScoredPoint with a complete PointPayload dict."""
     payload = {
@@ -26,7 +27,7 @@ def _mock_candidate(
         "max_drawdown_1y": max_dd,
         "lockup_days": 0,
         "launched_at": "2023-01-01",
-        "tax_treatment": TaxTreatment.ORDINARY_INCOME.value,
+        "tax_treatment": tax_treatment,
         "yield_source_mix": {"lending_spread": 1.0},
         "description": "test",
         "url": "https://example.com",
@@ -98,3 +99,35 @@ def test_respects_target_count():
     cands = [_mock_candidate(f"id{i}", score=1.0 - i * 0.05) for i in range(20)]
     positions = weighted_sum(cands, capital_usd=100_000, target_count=5)
     assert len(positions) == 5
+
+
+def test_tax_wrapper_boosts_ordinary_income_in_ira():
+    """In a traditional IRA, ordinary-income products should outweigh capital-gain products
+    given equal score and drawdown."""
+    cands = [
+        _mock_candidate("ord", score=1.0, tax_treatment=TaxTreatment.ORDINARY_INCOME.value),
+        _mock_candidate("cap", score=1.0, tax_treatment=TaxTreatment.CAPITAL_GAIN.value),
+    ]
+    positions = weighted_sum(
+        cands, capital_usd=100_000, target_count=2, max_position_pct=0.99,
+        tax_wrapper="traditional_ira",
+    )
+    ord_pos = next(p for p in positions if p.protocol_id == "ord")
+    cap_pos = next(p for p in positions if p.protocol_id == "cap")
+    assert ord_pos.weight > cap_pos.weight
+
+
+def test_tax_wrapper_penalizes_ordinary_income_in_taxable():
+    """In a taxable account, ordinary-income products should be penalized vs
+    capital-gain products at equal score/drawdown."""
+    cands = [
+        _mock_candidate("ord", score=1.0, tax_treatment=TaxTreatment.ORDINARY_INCOME.value),
+        _mock_candidate("cap", score=1.0, tax_treatment=TaxTreatment.CAPITAL_GAIN.value),
+    ]
+    positions = weighted_sum(
+        cands, capital_usd=100_000, target_count=2, max_position_pct=0.99,
+        tax_wrapper="taxable",
+    )
+    ord_pos = next(p for p in positions if p.protocol_id == "ord")
+    cap_pos = next(p for p in positions if p.protocol_id == "cap")
+    assert cap_pos.weight > ord_pos.weight
