@@ -127,6 +127,37 @@ def health() -> dict:
     return {"status": "ok", "catalog_size": len(catalog.load_catalog())}
 
 
+@app.get("/api/protocol/{protocol_id}")
+def protocol_detail(protocol_id: str, anchors: str = "") -> dict:
+    """Return one protocol's payload + (optionally) per-lens similarity scores
+    against a comma-separated list of anchor ids. Used by the scatter when the
+    user clicks a non-allocated dot — there's no Position for these points but
+    we still want to show why-or-why-not similarity in the drilldown radar.
+    """
+    cat = catalog.load_catalog()
+    payload = cat.get(protocol_id)
+    if payload is None:
+        return {"error": "unknown protocol_id"}
+
+    per_lens_scores: dict[str, float] = {}
+    anchor_list = [a.strip() for a in anchors.split(",") if a.strip()]
+    if anchor_list:
+        try:
+            raw = qdrant_client.per_lens_similarity_batch([protocol_id], anchor_list)
+            per_lens_scores = {
+                lens: _normalize_lens_score(lens, score)
+                for lens, score in raw.get(protocol_id, {}).items()
+            }
+        except Exception:
+            log.exception("per_lens_similarity_batch failed for %s", protocol_id)
+
+    return {
+        "id": protocol_id,
+        "payload": payload.model_dump(mode="json"),
+        "per_lens_scores": per_lens_scores,
+    }
+
+
 @app.get("/api/universe")
 def universe() -> list[dict]:
     """Every catalog point with per-lens UMAP coords (for the scatter plot)."""

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { fetchProtocol } from "../api";
 import AllocationBar from "../components/AllocationBar";
-import DrilldownDrawer from "../components/DrilldownDrawer";
+import DrilldownDrawer, { type DrilldownSubject } from "../components/DrilldownDrawer";
 import ExplanationCard from "../components/ExplanationCard";
 import LensScatter from "../components/LensScatter";
 import LensSelector from "../components/LensSelector";
@@ -16,7 +17,8 @@ const AVAILABLE_LENSES = ["narrative", "risk", "yield_source", "correlation", "t
 
 export default function ResultsView({ allocation, onBack }: Props) {
   const [lens, setLens] = useState<string>("narrative");
-  const [selected, setSelected] = useState<Position | null>(null);
+  const [subject, setSubject] = useState<DrilldownSubject | null>(null);
+  const [loadingPid, setLoadingPid] = useState<string | null>(null);
 
   const allocatedIds = useMemo(
     () => new Set(allocation.positions.map((p) => p.protocol_id)),
@@ -30,6 +32,37 @@ export default function ResultsView({ allocation, onBack }: Props) {
     }
     return map;
   }, [allocation.positions]);
+
+  const anchorIds = allocation.query_spec.positive_anchors;
+
+  const openAllocatedPosition = (p: Position) => {
+    setSubject({
+      payload: p.payload,
+      perLensScores: p.per_lens_scores,
+      position: p,
+    });
+  };
+
+  const handlePointClick = async (id: string) => {
+    const pos = positionById.get(id);
+    if (pos) {
+      openAllocatedPosition(pos);
+      return;
+    }
+    // Non-allocated → fetch payload + per_lens_scores from backend
+    setLoadingPid(id);
+    try {
+      const detail = await fetchProtocol(id, anchorIds);
+      setSubject({
+        payload: detail.payload,
+        perLensScores: detail.per_lens_scores,
+      });
+    } catch (e) {
+      console.error("Failed to fetch protocol detail:", e);
+    } finally {
+      setLoadingPid(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -46,7 +79,7 @@ export default function ResultsView({ allocation, onBack }: Props) {
 
       <AllocationBar
         positions={allocation.positions}
-        onPositionClick={setSelected}
+        onPositionClick={openAllocatedPosition}
       />
 
       <div>
@@ -59,14 +92,12 @@ export default function ResultsView({ allocation, onBack }: Props) {
         <LensScatter
           currentLens={lens}
           allocatedIds={allocatedIds}
-          onPointClick={(id) => {
-            const pos = positionById.get(id);
-            if (pos) setSelected(pos);
-          }}
+          onPointClick={handlePointClick}
         />
         <p className="mt-2 text-xs text-zinc-500">
-          Highlighted dots are the {allocatedIds.size} protocols in your allocation. Click any one
-          for the drilldown.
+          The {allocatedIds.size} highlighted dots are your allocation. Smaller dots are other
+          catalog protocols — click any of them to see why they didn't make the cut.
+          {loadingPid ? " Loading…" : ""}
         </p>
       </div>
 
@@ -88,7 +119,7 @@ export default function ResultsView({ allocation, onBack }: Props) {
         <ExplanationCard markdown={allocation.explanation} />
       </div>
 
-      <DrilldownDrawer position={selected} onClose={() => setSelected(null)} />
+      <DrilldownDrawer subject={subject} onClose={() => setSubject(null)} />
     </div>
   );
 }
