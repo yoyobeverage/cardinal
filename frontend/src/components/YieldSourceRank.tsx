@@ -104,10 +104,10 @@ export default function YieldSourceRank({ ranking, onChange }: Props) {
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <div>
-          <div className="text-sm text-zinc-200">Yield source preference · optional</div>
+          <div className="text-sm text-zinc-200">Where should your yield come from? · optional</div>
           <div className="text-xs text-zinc-500">
             {ranking.length === 0
-              ? "Skip — or drag to rank your preferred yield sources."
+              ? "Skip — or drag to rank your preferred sources of yield (real cash flow, fees, points, etc.)."
               : `Top: ${LABELS[items[0]]}`}
           </div>
         </div>
@@ -117,8 +117,10 @@ export default function YieldSourceRank({ ranking, onChange }: Props) {
       {open && (
         <div className="space-y-3 border-t border-zinc-800 px-4 pb-4 pt-3">
           <p className="text-xs text-zinc-500">
-            Drag to reorder. Top of the list = strongest weight in the Qdrant{" "}
-            <code>yield_source</code> lens.
+            Drag to reorder. The kind of yield at the top will pull the recommendations toward
+            protocols whose returns come from that source. "Real yield" means cash flows from
+            actual revenue (loan interest, T-bill coupons); "points / airdrops" means speculative
+            future token rewards.
           </p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={items} strategy={verticalListSortingStrategy}>
