@@ -75,7 +75,7 @@ def main() -> int:
     pts_r = qdrant_client.lens_query([lido], "risk", HardFilters(), limit=8)
     show("Scenario 4b: Lido neighborhood by RISK", pts_r)
 
-    # ---- Scenario 5: hard filter sanity — Solana-only ----
+    # ---- Scenario 5: hard filter sanity - Solana-only ----
     all_non_solana = [c for c in Chain if c != Chain.SOLANA]
     hf_solana_only = HardFilters(excluded_chains=all_non_solana)
     pts = qdrant_client.recommend(
@@ -84,7 +84,7 @@ def main() -> int:
     )
     show("Scenario 5: Solana-only candidates (Lido as anchor)", pts)
 
-    # ---- Scenario 6: exclude RWA — useful for crypto-only personas ----
+    # ---- Scenario 6: exclude RWA - useful for crypto-only personas ----
     hf_no_rwa = HardFilters(
         excluded_categories=[Category.RWA_TREASURY, Category.INSTITUTIONAL_LENDING]
     )

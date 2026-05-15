@@ -1,4 +1,4 @@
-// TypeScript mirror of backend/app/schemas.py — keep field names + values exactly aligned.
+// TypeScript mirror of backend/app/schemas.py - keep field names + values exactly aligned.
 
 export type Chain =
   | "ethereum" | "base" | "arbitrum" | "optimism"

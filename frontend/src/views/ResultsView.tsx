@@ -96,7 +96,7 @@ export default function ResultsView({ allocation, onBack }: Props) {
         />
         <p className="mt-2 text-xs text-zinc-500">
           The {allocatedIds.size} highlighted dots are your allocation. Smaller dots are other
-          catalog protocols — click any of them to see why they didn't make the cut.
+          catalog protocols - click any of them to see why they didn't make the cut.
           {loadingPid ? " Loading…" : ""}
         </p>
       </div>

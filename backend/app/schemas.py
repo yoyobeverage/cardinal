@@ -1,4 +1,4 @@
-"""Pydantic models — the single source of truth for inter-module contracts.
+"""Pydantic models - the single source of truth for inter-module contracts.
 
 Consumers:
 - scripts/ingest_*.py validate each protocol row through PointPayload.
@@ -139,7 +139,7 @@ class HardFilters(BaseModel):
 
 
 class QuerySpec(BaseModel):
-    """Gemini structured output — translator emits this."""
+    """Gemini structured output - translator emits this."""
 
     positive_anchors: list[str] = []
     negative_anchors: list[str] = []

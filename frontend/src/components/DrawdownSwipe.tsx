@@ -110,7 +110,7 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
           </div>
           <div className="text-xs text-zinc-500">
             {decisions.length === 0
-              ? "Skip — or answer 5 quick questions about real historical crashes to calibrate your risk tolerance."
+              ? "Skip - or answer 5 quick questions about real historical crashes to calibrate your risk tolerance."
               : `${decisions.length} / 5 answered`}
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
         <div className="space-y-3 border-t border-zinc-800 px-4 pb-4 pt-3">
           <p className="text-xs text-zinc-500">
             Each card shows what really happened during a famous crypto blow-up. Tell us whether
-            you would have held through it or sold — your answers steer the recommendations toward
+            you would have held through it or sold - your answers steer the recommendations toward
             protocols that match the risk appetite your choices reveal.
           </p>
           {SCENARIOS.map((s) => {

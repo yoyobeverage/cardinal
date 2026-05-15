@@ -55,7 +55,7 @@ TAX_TREATMENT_ORDER = [
 ]
 TAX_TREATMENT_DIM = 12
 
-# Correlation vector — 8d cosine. Index order:
+# Correlation vector - 8d cosine. Index order:
 #   [BTC, ETH, SPX, IEF, HYG, DXY, GOLD, USDC_rate]
 # Values are eyeballed expected 1y rolling Pearson correlations per category.
 # In a fuller build these would be computed from real historical APY series;
@@ -179,7 +179,7 @@ def build_risk(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]
         scores = [AUDIT_FIRM_SCORES.get(f, DEFAULT_AUDIT_SCORE) for f in p.audit_firms]
         v[2] = sum(scores) / len(scores) if scores else 0.0
 
-        v[3] = 0.5  # tvl_stability — no historical data yet
+        v[3] = 0.5  # tvl_stability - no historical data yet
         v[4] = max(0.0, min(1.0, p.max_drawdown_1y))
         v[5] = 0.0  # depeg_events_count_norm
         v[6] = 0.25  # oracle_diversity default
@@ -195,7 +195,7 @@ def build_risk(catalog: list[tuple[str, PointPayload]]) -> dict[str, list[float]
         v[12] = 1.0 if custody == "hybrid" else 0.0
 
         v[13] = 1.0 if p.category.value in LIQUIDATION_RISK_CATEGORIES else 0.0
-        v[14] = 1.0  # pause_function_flag — conservative default
+        v[14] = 1.0  # pause_function_flag - conservative default
         v[15] = min(1.0, math.log10(max(p.tvl_usd, 1)) / 10.0)
         v[16] = 0.2  # apy_volatility default
         # 17-31 padding stays 0

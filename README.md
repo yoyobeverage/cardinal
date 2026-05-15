@@ -5,7 +5,7 @@
 - **Live app:** https://frontend-eight-liard-21.vercel.app
 - **Backend API:** https://cardinal-zhu.fly.dev (try `/health` and `/api/universe`)
 
-Cardinal lets a user describe their preferences once — through a structured form, three optional drawdown-scenario swipes, and one freeform sentence — and returns a diversified yield portfolio drawn from a 83-protocol catalog. The interesting part is what Cardinal **does not** do.
+Cardinal lets a user describe their preferences once - through a structured form, three optional drawdown-scenario swipes, and one freeform sentence - and returns a diversified yield portfolio drawn from a 83-protocol catalog. The interesting part is what Cardinal **does not** do.
 
 ## The thesis: keep the LLM out of the selection
 
@@ -15,7 +15,7 @@ Most "AI yield advisors" sit an LLM in the decision seat. Form goes in, LLM read
 - **Can't see** the numeric structure (risk vectors, correlations) that distinguishes products
 - **Is non-deterministic**, so identical inputs produce different portfolios and the system is uninspectable
 
-Cardinal inverts the responsibility. The LLM is touched exactly twice per session — once to **parse** the freeform statement into a structured query spec, and once to **narrate** the final allocation in plain English. Every selection decision in between is vector arithmetic over a curated catalog in Qdrant. Vectors don't hallucinate, are deterministic, and can be inspected.
+Cardinal inverts the responsibility. The LLM is touched exactly twice per session - once to **parse** the freeform statement into a structured query spec, and once to **narrate** the final allocation in plain English. Every selection decision in between is vector arithmetic over a curated catalog in Qdrant. Vectors don't hallucinate, are deterministic, and can be inspected.
 
 ## Architecture
 
@@ -64,13 +64,13 @@ Each catalog point carries 6 populated vectors:
 
 ### 2. Recommend API with positive + negative anchors
 
-The translator extracts catalog ids the user implicitly likes (positive) and rejects (negative) from their freeform input — e.g. "I got rugged by Anchor in 2022" produces RWA T-bill anchors and zero algorithmic-stablecoin anchors. Qdrant's `RecommendQuery` with the `BEST_SCORE` strategy on a chosen lens produces ~20 candidates.
+The translator extracts catalog ids the user implicitly likes (positive) and rejects (negative) from their freeform input - e.g. "no algorithmic stablecoins, only audited T-bill protocols" produces RWA T-bill anchors and zero algorithmic-stablecoin anchors. Qdrant's `RecommendQuery` with the `BEST_SCORE` strategy on a chosen lens produces ~20 candidates.
 
 → `backend/app/qdrant_client.py:recommend()`
 
 ### 3. Universal Query with prefetch + RRF fusion
 
-When the user has no anchors but has lens weights, Cardinal builds a multi-vector prefetch — one branch per lens — and fuses results via Reciprocal Rank Fusion in a single round trip.
+When the user has no anchors but has lens weights, Cardinal builds a multi-vector prefetch - one branch per lens - and fuses results via Reciprocal Rank Fusion in a single round trip.
 
 → `backend/app/qdrant_client.py:multi_vector_prefetch()`
 
@@ -90,8 +90,8 @@ The optional drawdown-swipe onboarding presents 5 historical events (Terra/Luna 
 
 Both operate on the same Qdrant candidate set; the frontend has a toggle so the demo can compare them side by side.
 
-- **Weighted-sum** (default) — `score × 1/(1 + max_drawdown_1y) × tax_multiplier`, cap each position at 25%, redistribute excess uniformly across non-capped positions. Risk-tilted, asset-location-aware (boosts ordinary-income yields inside IRA/HSA wrappers; boosts qualified-dividend/cap-gain/QBI products in taxable accounts; penalizes ordinary-income in taxable). Respects the qualitative preferences encoded in the candidate ranking.
-- **Mean-variance (Markowitz)** — scipy SLSQP solves `min wᵀΣw  s.t.  wᵀr ≥ floor,  sum(w) = 1,  0 ≤ wᵢ ≤ cap`. Σ approximated by the pairwise cosine-similarity matrix of correlation vectors, since we don't have real historical return series at hackathon scope. Pure variance minimization; can produce surprising diversifications. Not tax-aware (tax-aware Markowitz is a research area).
+- **Weighted-sum** (default) - `score × 1/(1 + max_drawdown_1y) × tax_multiplier`, cap each position at 25%, redistribute excess uniformly across non-capped positions. Risk-tilted, asset-location-aware (boosts ordinary-income yields inside IRA/HSA wrappers; boosts qualified-dividend/cap-gain/QBI products in taxable accounts; penalizes ordinary-income in taxable). Respects the qualitative preferences encoded in the candidate ranking.
+- **Mean-variance (Markowitz)** - scipy SLSQP solves `min wᵀΣw  s.t.  wᵀr ≥ floor,  sum(w) = 1,  0 ≤ wᵢ ≤ cap`. Σ approximated by the pairwise cosine-similarity matrix of correlation vectors, since we don't have real historical return series at hackathon scope. Pure variance minimization; can produce surprising diversifications. Not tax-aware (tax-aware Markowitz is a research area).
 
 For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (4.14% portfolio APY); mean-variance returns 1 lending position at the 25% cap + 7 LSTs/LRTs equal-weighted at 10.7% (2.26% APY, exactly the return floor). Same candidate set, fundamentally different baskets.
 
@@ -101,9 +101,9 @@ For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (
 
 Ingested via two sources:
 
-- **DefiLlama `/yields/pools`** — filtered to a whitelisted set of 40 projects spanning lending (Aave V3, Compound V3, Morpho Blue, SparkLend, Fluid, Jupiter Lend, Kamino), savings/RWA (Spark Savings, Sky, Frax, Ondo, Usual, Reservoir), LSTs (Lido, Rocket Pool, cbETH, frxETH, Origin OETH, Jupiter Staked SOL, Sanctum Infinity, Swell swETH, Mantle), LRTs (ether.fi stake+liquid, Renzo, Kelp, Swell rswETH, Bedrock uniETH, Puffer), AMMs (Curve, Convex, Aerodrome, Velodrome, Uniswap V3, Balancer V3), yield aggregators (Yearn, Beefy, Gauntlet), perps LP (GMX V2), and fixed-rate (Pendle). Round-robin selection ensures every project is represented before TVL ranking fills remaining slots. APY floor of 0.5% filters dormant pools.
+- **DefiLlama `/yields/pools`** - filtered to a whitelisted set of 40 projects spanning lending (Aave V3, Compound V3, Morpho Blue, SparkLend, Fluid, Jupiter Lend, Kamino), savings/RWA (Spark Savings, Sky, Frax, Ondo, Usual, Reservoir), LSTs (Lido, Rocket Pool, cbETH, frxETH, Origin OETH, Jupiter Staked SOL, Sanctum Infinity, Swell swETH, Mantle), LRTs (ether.fi stake+liquid, Renzo, Kelp, Swell rswETH, Bedrock uniETH, Puffer), AMMs (Curve, Convex, Aerodrome, Velodrome, Uniswap V3, Balancer V3), yield aggregators (Yearn, Beefy, Gauntlet), perps LP (GMX V2), and fixed-rate (Pendle). Round-robin selection ensures every project is represented before TVL ranking fills remaining slots. APY floor of 0.5% filters dormant pools.
 
-- **Hand-curated YAML** — 15 RWA/CeFi products DefiLlama doesn't surface well: BlackRock BUIDL, Maple HY + Cash, Centrifuge Anemoy, Hashnote USYC, OpenEden TBILL, Mountain USDM, Franklin BENJI, Goldfinch Senior, Matrixdock STBT, TrueFi, Clearpool PGF500, Securitize BlackRock US Cash, WisdomTree WTGXX, Mantle mETH.
+- **Hand-curated YAML** - 15 RWA/CeFi products DefiLlama doesn't surface well: BlackRock BUIDL, Maple HY + Cash, Centrifuge Anemoy, Hashnote USYC, OpenEden TBILL, Mountain USDM, Franklin BENJI, Goldfinch Senior, Matrixdock STBT, TrueFi, Clearpool PGF500, Securitize BlackRock US Cash, WisdomTree WTGXX, Mantle mETH.
 
 → [`backend/scripts/ingest_defillama.py`](backend/scripts/ingest_defillama.py), [`backend/scripts/protocol_meta.py`](backend/scripts/protocol_meta.py), [`backend/data/manual.yaml`](backend/data/manual.yaml)
 
@@ -126,7 +126,7 @@ Ingested via two sources:
 ### Prerequisites
 - Python 3.11+, Node 22+
 - A Qdrant Cloud cluster ([cloud.qdrant.io](https://cloud.qdrant.io), free tier)
-- A Google AI Studio API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey), free tier — 20 requests/day on Flash Lite is fine for development)
+- A Google AI Studio API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey), free tier - 20 requests/day on Flash Lite is fine for development)
 
 ### Backend
 ```bash
@@ -165,15 +165,15 @@ cd backend && pytest                      # 16 unit tests (translator + optimize
 
 Three persona buttons pre-fill the form so the demo can show different shaping behaviors instantly:
 
-1. **House-buyer (anchor trauma)** — $100k, 12 months, taxable, audits ≥ 2, lockup ≤ 270 days. Freeform: *"I got rugged by Anchor in 2022. I need real liquidity by month 10 because I'm buying a house."* Expected output: heavy RWA T-bill allocation (Ondo, Mountain Protocol, Matrixdock, Centrifuge Anemoy) at ~20% each.
+1. **House-buyer** - $100k, 12 months, taxable, audits ≥ 2, lockup ≤ 270 days. Freeform: *"I need real liquidity by month 10 because I'm buying a house. Keep things conservative; avoid anything that could lose 20%+ of principal."* Expected output: heavy RWA T-bill allocation (Ondo, Mountain Protocol, Matrixdock, Centrifuge Anemoy) at ~20% each.
 
-2. **Conservative retiree** — $500k, 36 months, traditional_ira, audits ≥ 3, TVL ≥ $50M, lockup ≤ 30 days, no Solana. Expected: highest-audit savings-rate and institutional-lending products (SparkLend, Spark Savings, Maple Cash, Sky Lending).
+2. **Conservative retiree** - $500k, 36 months, traditional_ira, audits ≥ 3, TVL ≥ $50M, lockup ≤ 30 days, no Solana. Expected: highest-audit savings-rate and institutional-lending products (SparkLend, Spark Savings, Maple Cash, Sky Lending).
 
-3. **Degen seeker** — $10k, 6 months, taxable, no audit floor. Freeform: *"Max yield, I know the risks. Give me points, emissions, LRTs, basis trade — the spicy stuff."* Expected: Pendle, LRTs (Renzo, Kelp, Swell), perps LP pools, GMX V2.
+3. **Degen seeker** - $10k, 6 months, taxable, no audit floor. Freeform: *"Max yield, I know the risks. Give me points, emissions, LRTs, basis trade - the spicy stuff."* Expected: Pendle, LRTs (Renzo, Kelp, Swell), perps LP pools, GMX V2.
 
 ## The lens-swap money shot
 
-The most visually distinctive moment in the demo is the lens selector on the results page. Same 83 protocols, same allocation highlighted, but as you click between **Narrative → Risk → Yield Source → Correlation → Tax → Composability**, every dot animates to its new 2D UMAP projection in 600 ms. LSTs cluster tightly under Narrative, then spread out under Risk, then cluster differently again under Yield Source, then re-cluster on Composability (because they all feed into the same set of downstream protocols). The drilldown radar shows a per-lens similarity profile for any allocated protocol — now with all 6 spokes.
+The most visually distinctive moment in the demo is the lens selector on the results page. Same 83 protocols, same allocation highlighted, but as you click between **Narrative → Risk → Yield Source → Correlation → Tax → Composability**, every dot animates to its new 2D UMAP projection in 600 ms. LSTs cluster tightly under Narrative, then spread out under Risk, then cluster differently again under Yield Source, then re-cluster on Composability (because they all feed into the same set of downstream protocols). The drilldown radar shows a per-lens similarity profile for any allocated protocol - now with all 6 spokes.
 
 The point is to make the multi-vector index legible. There's only one portfolio, but it lives in four different similarity spaces simultaneously, and Qdrant's named-vector design is what makes that visible.
 
@@ -191,4 +191,4 @@ Demo video link will appear here once recorded.
 
 ## License
 
-MIT — see `LICENSE`.
+MIT - see `LICENSE`.

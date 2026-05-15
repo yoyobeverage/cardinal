@@ -107,7 +107,7 @@ export default function YieldSourceRank({ ranking, onChange }: Props) {
           <div className="text-sm text-zinc-200">Where should your yield come from? · optional</div>
           <div className="text-xs text-zinc-500">
             {ranking.length === 0
-              ? "Skip — or drag to rank your preferred sources of yield (real cash flow, fees, points, etc.)."
+              ? "Skip - or drag to rank your preferred sources of yield (real cash flow, fees, points, etc.)."
               : `Top: ${LABELS[items[0]]}`}
           </div>
         </div>

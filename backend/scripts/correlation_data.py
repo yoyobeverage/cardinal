@@ -147,7 +147,7 @@ def compute_protocol_correlation(
     apy_returns = apy.diff().dropna()
     if len(apy_returns) < MIN_OBSERVATIONS:
         return None
-    # Align indexes — both are date-indexed
+    # Align indexes - both are date-indexed
     apy_returns.index = pd.to_datetime(apy_returns.index).date
     ref_returns = reference_returns.copy()
     ref_returns.index = pd.to_datetime(ref_returns.index).date

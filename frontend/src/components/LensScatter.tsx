@@ -87,7 +87,7 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
       .catch((e) => setError(String(e)));
   }, []);
 
-  // Distinct categories present in the catalog — drives the legend.
+  // Distinct categories present in the catalog - drives the legend.
   const presentCategories = useMemo(() => {
     const set = new Set(points.map((p) => p.category));
     return Array.from(set).sort();
@@ -100,7 +100,7 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
     <div className="space-y-2">
       <p className="text-xs text-zinc-500">
         2D UMAP projection of the <span className="text-zinc-300">{LENS_LABEL_SHORT[currentLens]}</span> vector.
-        Protocols that cluster together are similar in {LENS_DESCRIPTION[currentLens]}. Axes themselves are unitless —
+        Protocols that cluster together are similar in {LENS_DESCRIPTION[currentLens]}. Axes themselves are unitless -
         only relative position matters. Click any dot for details.
       </p>
 
@@ -145,11 +145,11 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
                 onClick={() => onPointClick?.(p.id)}
               >
                 <title>
-                  {p.protocol} — {p.product}
+                  {p.protocol} - {p.product}
                   {"\n"}
                   {CATEGORY_LABEL[p.category] ?? p.category} · {p.current_apy.toFixed(2)}% APY · ${(p.tvl_usd / 1e6).toFixed(0)}M TVL
                   {"\n"}
-                  {isAllocated ? "(in your allocation — click for drilldown)" : "(click to inspect)"}
+                  {isAllocated ? "(in your allocation - click for drilldown)" : "(click to inspect)"}
                 </title>
               </circle>
             </g>

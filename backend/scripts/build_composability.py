@@ -3,7 +3,7 @@ embeddings per catalog protocol. Called by scripts/build_vectors.py:main().
 
 Protocols with no edges in PROJECT_GRAPH get a self-loop so node2vec still
 emits a vector for them (otherwise the random walks would crash on isolated
-nodes). They end up isolated in embedding space — which is the right semantic:
+nodes). They end up isolated in embedding space - which is the right semantic:
 "no known composability."
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ from node2vec import Node2Vec
 
 from app.schemas import PointPayload
 
-# composability vector dim — must match qdrant_client.VECTOR_CONFIGS["composability"]
+# composability vector dim - must match qdrant_client.VECTOR_CONFIGS["composability"]
 COMPOSABILITY_DIM = 64
 
 
@@ -86,7 +86,7 @@ def build_composability(catalog: list[tuple[str, PointPayload]]) -> dict[str, li
         if cid in model.wv:
             out[cid] = model.wv[cid].astype(float).tolist()
         else:
-            # Shouldn't happen — every node gets a vector after self-loop.
+            # Shouldn't happen - every node gets a vector after self-loop.
             out[cid] = [0.0] * COMPOSABILITY_DIM
     return out
 

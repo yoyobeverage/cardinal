@@ -8,7 +8,7 @@ of this graph to produce 64d composability vectors.
 The graph is intentionally directional: stETH is accepted by Aave (edge from
 lido -> aave-v3), but Aave's aTokens aren't typically deposited back into Lido.
 
-Coverage isn't exhaustive — focus is on the top-30 most composable assets in
+Coverage isn't exhaustive - focus is on the top-30 most composable assets in
 the catalog. Long-tail protocols not in the graph get a self-loop only (so
 node2vec still produces a vector for them, just one isolated from the cluster).
 """
@@ -38,7 +38,7 @@ PROJECT_GRAPH: dict[str, list[str]] = {
         "morpho-blue", "curve-dex", "convex-finance", "pendle",
     ],
 
-    # LRTs — restake into EigenLayer, often re-deposited in Pendle/Aave/Morpho
+    # LRTs - restake into EigenLayer, often re-deposited in Pendle/Aave/Morpho
     "ether.fi-stake": [
         "aave-v3", "morpho-blue", "pendle", "ether.fi-liquid", "renzo",
         "gauntlet", "curve-dex", "balancer-v3",
@@ -73,7 +73,7 @@ PROJECT_GRAPH: dict[str, list[str]] = {
         "kamino-lend", "jupiter-lend",
     ],
 
-    # Stablecoins / RWAs — get rehypothecated as Pendle PT bases, lending markets
+    # Stablecoins / RWAs - get rehypothecated as Pendle PT bases, lending markets
     "ethena-usde": [
         "pendle", "morpho-blue", "aave-v3", "sparklend", "curve-dex",
         "convex-finance", "fluid-lending", "usual-usd0", "reservoir-protocol",
@@ -106,7 +106,7 @@ PROJECT_GRAPH: dict[str, list[str]] = {
         "pendle", "curve-dex",
     ],
 
-    # Lending receipts — sometimes used as collateral on other markets
+    # Lending receipts - sometimes used as collateral on other markets
     "aave-v3": [
         "pendle", "morpho-blue", "yearn-finance", "beefy",
     ],

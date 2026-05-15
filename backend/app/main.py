@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import catalog, llm, optimizer, qdrant_client
 from app.schemas import Allocation, FormInput, LensWeights, QuerySpec
 
-# Mirror of YIELD_SOURCE_ORDER in scripts/build_vectors.py — keep in sync.
+# Mirror of YIELD_SOURCE_ORDER in scripts/build_vectors.py - keep in sync.
 # First 11 slots map to the YieldSource enum; last 5 are reserved padding.
 _YIELD_SOURCE_ORDER = [
     "real_yield", "lending_spread", "amm_fees", "options_premium",
@@ -109,7 +109,7 @@ def _run_query(spec: QuerySpec) -> list:
             hard_filters=spec.hard_filters,
             limit=20,
         )
-    # No anchors — scroll-style enumeration on the primary lens (no scoring against anchor).
+    # No anchors - scroll-style enumeration on the primary lens (no scoring against anchor).
     client = qdrant_client.get_client()
     pts, _ = client.scroll(
         collection_name=qdrant_client.COLLECTION,
@@ -131,7 +131,7 @@ def health() -> dict:
 def protocol_detail(protocol_id: str, anchors: str = "") -> dict:
     """Return one protocol's payload + (optionally) per-lens similarity scores
     against a comma-separated list of anchor ids. Used by the scatter when the
-    user clicks a non-allocated dot — there's no Position for these points but
+    user clicks a non-allocated dot - there's no Position for these points but
     we still want to show why-or-why-not similarity in the drilldown radar.
     """
     cat = catalog.load_catalog()

@@ -1,7 +1,7 @@
 """Hand-curated metadata for the DefiLlama projects whitelisted into the catalog.
 
 Keys: DefiLlama project slug (lowercase, dash-separated, as returned by /yields/pools).
-Values: fields DefiLlama does not provide — audit_count, audit_firms, launched_at,
+Values: fields DefiLlama does not provide - audit_count, audit_firms, launched_at,
 lockup_days, max_drawdown_1y, tax_treatment, yield_source_mix, category, description, url.
 
 Audit counts and dates are best-guess as of catalog assembly (2026-05). Refine with primary

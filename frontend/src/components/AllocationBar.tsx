@@ -28,7 +28,7 @@ export default function AllocationBar({ positions, onPositionClick }: Props) {
             className={`${COLORS[i % COLORS.length]} flex items-center justify-center text-xs font-medium text-white transition hover:brightness-110`}
             style={{ width: `${p.weight * 100}%` }}
             title={
-              `${p.payload.protocol} — ${p.payload.product}\n` +
+              `${p.payload.protocol} - ${p.payload.product}\n` +
               `Weight: ${(p.weight * 100).toFixed(1)}% ($${p.dollars.toFixed(0)})\n` +
               `APY: ${p.payload.current_apy.toFixed(2)}%`
             }

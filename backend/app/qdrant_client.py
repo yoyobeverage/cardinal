@@ -254,7 +254,7 @@ def discovery_walk(
 def per_lens_similarity(point_id: str, anchor_ids: Sequence[str]) -> dict[str, float]:
     """Returns {lens_name: raw_similarity_score} for a single point vs averaged anchors.
 
-    Caller should normalize across distance metrics — cosine scores live in [-1, 1],
+    Caller should normalize across distance metrics - cosine scores live in [-1, 1],
     Euclidean (risk) returns raw distance where smaller is closer.
     """
     return per_lens_similarity_batch([point_id], anchor_ids).get(point_id, {})

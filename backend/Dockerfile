@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Install runtime deps from pyproject.toml. The [pipeline] / [dev] extras are NOT
-# installed — only what the FastAPI process imports.
+# installed - only what the FastAPI process imports.
 COPY pyproject.toml ./
 COPY app/ ./app/
 RUN pip install --no-cache-dir .

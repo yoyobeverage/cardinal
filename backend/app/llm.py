@@ -112,7 +112,7 @@ def translate(form: FormInput) -> QuerySpec:
         spec = _filter_hallucinations(spec)
         spec = _merge_form_filters(spec, form)
         if not spec.positive_anchors:
-            # No usable anchors after hallucination filter — fall back to deterministic anchor
+            # No usable anchors after hallucination filter - fall back to deterministic anchor
             fb = fallback_spec(form)
             spec.positive_anchors = fb.positive_anchors
         return spec
@@ -138,7 +138,7 @@ def fallback_spec(form: FormInput) -> QuerySpec:
         valid.append((pid, p))
 
     if not valid:
-        valid = list(cat.items())  # filters too strict — soften
+        valid = list(cat.items())  # filters too strict - soften
 
     ira_categories = {"rwa_treasury", "savings_rate"}
     if form.tax_wrapper in (TaxWrapper.TRADITIONAL_IRA, TaxWrapper.ROTH_IRA):

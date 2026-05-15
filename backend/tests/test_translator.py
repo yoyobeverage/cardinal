@@ -17,7 +17,7 @@ def basic_form() -> FormInput:
         min_audit_count=2,
         min_tvl_usd=0,
         max_lockup_days=None,
-        freeform="I got rugged by Anchor in 2022, want RWA T-bill exposure",
+        freeform="want RWA T-bill exposure, no algorithmic stablecoins",
     )
 
 

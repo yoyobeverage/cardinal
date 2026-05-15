@@ -41,7 +41,7 @@ interface Persona {
 const PERSONAS: Persona[] = [
   {
     label: "House-buyer",
-    description: "$100k for 12 months. Burned by Anchor, needs liquidity by month 10.",
+    description: "$100k for 12 months. Needs liquidity by month 10. Wants safety, not yield-chasing.",
     preset: {
       capital_usd: 100_000,
       horizon_months: 12,
@@ -50,7 +50,7 @@ const PERSONAS: Persona[] = [
       min_audit_count: 2,
       min_tvl_usd: 0,
       max_lockup_days: 270,
-      freeform: "I got rugged by Anchor in 2022. I need real liquidity by month 10 because I'm buying a house.",
+      freeform: "I need real liquidity by month 10 because I'm buying a house. Keep things conservative; avoid anything that could lose 20%+ of principal.",
     },
   },
   {
@@ -78,7 +78,7 @@ const PERSONAS: Persona[] = [
       min_audit_count: 0,
       min_tvl_usd: 0,
       max_lockup_days: null,
-      freeform: "Max yield, I know the risks. Give me points, emissions, LRTs, basis trade — the spicy stuff.",
+      freeform: "Max yield, I know the risks. Give me points, emissions, LRTs, basis trade - the spicy stuff.",
     },
   },
 ];
@@ -146,8 +146,8 @@ export default function FormView({ onAllocation }: Props) {
           Find a yield portfolio that fits your situation.
         </h2>
         <p className="text-sm leading-relaxed text-zinc-400">
-          Cardinal searches <span className="text-zinc-200">83 yield products</span> — DeFi lending,
-          liquid staking, tokenized Treasury bills, and more — and returns a diversified allocation
+          Cardinal searches <span className="text-zinc-200">83 yield products</span> - DeFi lending,
+          liquid staking, tokenized Treasury bills, and more - and returns a diversified allocation
           tailored to who you are. Tell us a few things below; you don't need to know crypto jargon.
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -268,7 +268,7 @@ export default function FormView({ onAllocation }: Props) {
               Safety filters
             </div>
             <div className="mt-0.5 text-xs text-zinc-500">
-              Hard floors on audits, protocol size, and lockup duration. Optional — defaults are reasonable.
+              Hard floors on audits, protocol size, and lockup duration. Optional - defaults are reasonable.
             </div>
           </div>
           <span className="text-zinc-400">{advancedOpen ? "▼" : "▶"}</span>
@@ -301,7 +301,7 @@ export default function FormView({ onAllocation }: Props) {
                   className={inputCls}
                 />
                 <p className={helperCls}>
-                  Total Value Locked — roughly how much money is currently in the protocol.
+                  Total Value Locked - roughly how much money is currently in the protocol.
                   Bigger = more battle-tested. Suggested ≥ $5M; pickier users use $50M+.
                 </p>
               </label>
@@ -350,7 +350,7 @@ export default function FormView({ onAllocation }: Props) {
           Personalize (optional)
         </h3>
         <p className="text-xs text-zinc-500">
-          Three optional ways to shape the result — rank your preferred yield types, tell us how
+          Three optional ways to shape the result - rank your preferred yield types, tell us how
           you behaved in past crashes, or choose how we weight the math.
         </p>
 
@@ -405,14 +405,14 @@ export default function FormView({ onAllocation }: Props) {
           <span className={labelTextCls}>Anything else worth knowing?</span>
           <textarea
             rows={4}
-            placeholder="e.g. 'I got rugged by Anchor in 2022. I need real liquidity by month 10 because I'm buying a house.'"
+            placeholder="e.g. 'I need the money in 10 months for a house down payment. Keep it boring.'"
             {...register("freeform")}
             className={inputCls}
           />
           <p className={helperCls}>
             Tell us about life events you're saving for, specific protocols you trust or distrust,
             yields that burned you in the past, or anything else context-specific. Our AI translates
-            this into search filters and concerns — so a sentence like "I need the money in 10
+            this into search filters and concerns - so a sentence like "I need the money in 10
             months" automatically caps the lockup duration we'll consider.
           </p>
         </label>

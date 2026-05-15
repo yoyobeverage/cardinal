@@ -63,7 +63,7 @@ export default function DrilldownDrawer({ subject, onClose }: Props) {
             <p className="text-sm text-zinc-400">{p.product}</p>
             {!isAllocation && (
               <p className="mt-1 text-xs text-amber-400">
-                Not in your current allocation — exploring this protocol
+                Not in your current allocation - exploring this protocol
               </p>
             )}
           </div>

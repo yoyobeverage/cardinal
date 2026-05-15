@@ -7,7 +7,7 @@
   taxable accounts).
 - mean_variance: Markowitz minimum-variance subject to an expected-return floor.
   Covariance approximated by the pairwise cosine-similarity matrix of the
-  protocols' correlation vectors. Math-Econ flex for Day 14. Not tax-aware —
+  protocols' correlation vectors. Math-Econ flex for Day 14. Not tax-aware -
   tax-aware Markowitz is a research area we don't tackle at hackathon scope.
 """
 from __future__ import annotations
@@ -57,7 +57,7 @@ def weighted_sum(
     Position list in descending weight order, summing to 1.0.
 
     risk_factor = 1 / (1 + max_drawdown_1y), so lower-drawdown protocols get larger weight.
-    tax_multiplier = lookup on (tax_wrapper, payload.tax_treatment) — boosts ordinary-income
+    tax_multiplier = lookup on (tax_wrapper, payload.tax_treatment) - boosts ordinary-income
     products in IRA/HSA wrappers and qualified-dividend / cap-gain / qbi products in taxable
     accounts. Default 1.0 for unmatched combinations.
     Qdrant scores are normalized via max(score, 0) so Euclidean (which can be >0) and cosine
@@ -134,7 +134,7 @@ def mean_variance(
       0 <= w_i <= max_position_pct
 
     Σ is the pairwise cosine-similarity matrix of normalized correlation
-    vectors — a stand-in for the actual covariance matrix, which would
+    vectors - a stand-in for the actual covariance matrix, which would
     require historical return data we don't have at hackathon scope.
 
     Falls back to weighted_sum on solver failure or missing correlation data.
