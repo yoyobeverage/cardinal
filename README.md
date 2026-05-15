@@ -2,7 +2,7 @@
 
 **A vector-native yield-discovery system for crypto investors.** Built for the [Qdrant Hackathon 2026](https://try.qdrant.tech/hackathon-vsd).
 
-- **Live app:** https://frontend-eight-liard-21.vercel.app
+- **Live app:** https://cardinal-qdrant.vercel.app
 - **Backend API:** https://cardinal-zhu.fly.dev (try `/health` and `/api/universe`)
 
 Cardinal lets a user describe their preferences once - through a structured form, three optional drawdown-scenario swipes, and one freeform sentence - and returns a diversified yield portfolio drawn from a 83-protocol catalog. The interesting part is what Cardinal **does not** do.
