@@ -1,5 +1,7 @@
 import ReactMarkdown from "react-markdown";
 
+import { INK, INK_2, MINT } from "../theme";
+
 interface Props {
   markdown: string;
 }
@@ -7,12 +9,14 @@ interface Props {
 export default function ExplanationCard({ markdown }: Props) {
   if (!markdown.trim()) return null;
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900 p-5 text-sm leading-relaxed text-zinc-200">
+    <div className="text-base leading-relaxed" style={{ color: INK_2 }}>
       <ReactMarkdown
         components={{
           p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="text-zinc-100">{children}</strong>,
-          em: ({ children }) => <em className="text-emerald-300">{children}</em>,
+          strong: ({ children }) => (
+            <strong style={{ color: INK, fontWeight: 600 }}>{children}</strong>
+          ),
+          em: ({ children }) => <em style={{ color: MINT, fontStyle: "italic" }}>{children}</em>,
           ul: ({ children }) => <ul className="mb-3 list-disc pl-5 last:mb-0">{children}</ul>,
           li: ({ children }) => <li className="mb-1">{children}</li>,
           a: ({ href, children }) => (
@@ -20,7 +24,8 @@ export default function ExplanationCard({ markdown }: Props) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-400 hover:underline"
+              className="hover:underline"
+              style={{ color: MINT }}
             >
               {children}
             </a>

@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  BORDER,
+  CATEGORY_COLOR_LIGHT,
+  INK,
+  INK_2,
+  INK_3,
+  MINT,
+  SURFACE_2,
+} from "../theme";
+
 interface UniversePoint {
   id: string;
   protocol: string;
@@ -19,23 +29,6 @@ interface Props {
 const VIEW_SIZE = 480;
 const PADDING = 30;
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://127.0.0.1:8000";
-
-const CATEGORY_COLOR: Record<string, string> = {
-  lending: "#60a5fa",
-  fixed_rate: "#a78bfa",
-  lst: "#34d399",
-  lrt: "#10b981",
-  stable_amm: "#fbbf24",
-  volatile_amm: "#f59e0b",
-  options_vault: "#f472b6",
-  rwa_treasury: "#22d3ee",
-  institutional_lending: "#0ea5e9",
-  perps_lp: "#fb7185",
-  basis_trade: "#e879f9",
-  yield_aggregator: "#facc15",
-  savings_rate: "#5eead4",
-  stablecoin_issuance: "#c084fc",
-};
 
 const CATEGORY_LABEL: Record<string, string> = {
   lending: "Lending",
@@ -87,27 +80,28 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
       .catch((e) => setError(String(e)));
   }, []);
 
-  // Distinct categories present in the catalog - drives the legend.
   const presentCategories = useMemo(() => {
     const set = new Set(points.map((p) => p.category));
     return Array.from(set).sort();
   }, [points]);
 
-  if (error) return <div className="text-red-400">Failed to load universe: {error}</div>;
-  if (points.length === 0) return <div className="text-zinc-500">Loading universe…</div>;
+  if (error) return <div style={{ color: "#b91c1c" }}>Failed to load universe: {error}</div>;
+  if (points.length === 0) return <div style={{ color: INK_3 }}>Loading universe…</div>;
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-zinc-500">
-        2D UMAP projection of the <span className="text-zinc-300">{LENS_LABEL_SHORT[currentLens]}</span> vector.
-        Protocols that cluster together are similar in {LENS_DESCRIPTION[currentLens]}. Axes themselves are unitless -
-        only relative position matters. Click any dot for details.
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed" style={{ color: INK_3 }}>
+        2D UMAP projection of the{" "}
+        <span style={{ color: INK }}>{LENS_LABEL_SHORT[currentLens]}</span> vector. Protocols
+        that cluster together are similar in {LENS_DESCRIPTION[currentLens]}. Axes are
+        unitless — only relative position matters. Click any dot for details.
       </p>
 
       <svg
         width="100%"
         viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
-        className="rounded border border-zinc-800 bg-zinc-950"
+        className="rounded"
+        style={{ background: SURFACE_2, border: `1px solid ${BORDER}` }}
         data-current-lens={currentLens}
       >
         {points.map((p) => {
@@ -118,10 +112,10 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
           const cy = PADDING + ny * (VIEW_SIZE - 2 * PADDING);
           const isAllocated = allocatedIds.has(p.id);
           const isHovered = hoveredId === p.id;
-          const color = CATEGORY_COLOR[p.category] ?? "#71717a";
+          const color = CATEGORY_COLOR_LIGHT[p.category] ?? INK_3;
           const baseR = isAllocated ? 8 : 4;
           const r = isHovered ? baseR + 2 : baseR;
-          const baseOpacity = isAllocated ? 1 : 0.5;
+          const baseOpacity = isAllocated ? 1 : 0.55;
           return (
             <g
               key={p.id}
@@ -133,8 +127,8 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
               <circle
                 r={r}
                 fill={color}
-                stroke={isAllocated || isHovered ? "#fafafa" : "none"}
-                strokeWidth={1.5}
+                stroke={isAllocated ? INK : isHovered ? color : "none"}
+                strokeWidth={isAllocated ? 2 : 1.5}
                 opacity={isHovered ? 1 : baseOpacity}
                 style={{
                   transition: "r 150ms ease, opacity 150ms ease",
@@ -145,11 +139,11 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
                 onClick={() => onPointClick?.(p.id)}
               >
                 <title>
-                  {p.protocol} - {p.product}
+                  {p.protocol} — {p.product}
                   {"\n"}
                   {CATEGORY_LABEL[p.category] ?? p.category} · {p.current_apy.toFixed(2)}% APY · ${(p.tvl_usd / 1e6).toFixed(0)}M TVL
                   {"\n"}
-                  {isAllocated ? "(in your allocation - click for drilldown)" : "(click to inspect)"}
+                  {isAllocated ? "(in your allocation — click for drilldown)" : "(click to inspect)"}
                 </title>
               </circle>
             </g>
@@ -157,16 +151,23 @@ export default function LensScatter({ currentLens, allocatedIds, onPointClick }:
         })}
       </svg>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: INK_2 }}>
         {presentCategories.map((cat) => (
           <div key={cat} className="inline-flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: CATEGORY_COLOR[cat] ?? "#71717a" }}
+              style={{ backgroundColor: CATEGORY_COLOR_LIGHT[cat] ?? INK_3 }}
             />
             <span>{CATEGORY_LABEL[cat] ?? cat}</span>
           </div>
         ))}
+        <div className="ml-auto inline-flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-full"
+            style={{ background: MINT, border: `2px solid ${INK}` }}
+          />
+          <span style={{ color: INK_3 }}>= in your allocation</span>
+        </div>
       </div>
     </div>
   );

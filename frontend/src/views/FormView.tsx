@@ -4,7 +4,31 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { fetchPortfolio, type OptimizerName } from "../api";
 import DrawdownSwipeStack from "../components/DrawdownSwipe";
 import YieldSourceRank from "../components/YieldSourceRank";
-import type { Allocation, Chain, DrawdownSwipe, FormInput, TaxWrapper, YieldSource } from "../types";
+import {
+  BG,
+  BORDER,
+  BORDER_BRIGHT,
+  DANGER,
+  DANGER_BG,
+  INK,
+  INK_2,
+  INK_3,
+  MINT,
+  MINT_BG,
+  MINT_BRIGHT,
+  MONO,
+  SANS,
+  SURFACE,
+  SURFACE_2,
+} from "../theme";
+import type {
+  Allocation,
+  Chain,
+  DrawdownSwipe,
+  FormInput,
+  TaxWrapper,
+  YieldSource,
+} from "../types";
 
 const ALL_CHAINS: { value: Chain; label: string }[] = [
   { value: "ethereum",  label: "Ethereum" },
@@ -19,9 +43,18 @@ const ALL_CHAINS: { value: Chain; label: string }[] = [
 
 const WRAPPERS: { value: TaxWrapper; label: string; hint: string }[] = [
   { value: "taxable",         label: "Taxable",       hint: "Brokerage / on-chain wallet" },
-  { value: "traditional_ira", label: "Traditional IRA", hint: "Pre-tax, taxed on withdrawal" },
+  { value: "traditional_ira", label: "Trad. IRA",     hint: "Pre-tax, taxed on withdrawal" },
   { value: "roth_ira",        label: "Roth IRA",      hint: "After-tax, withdrawals tax-free" },
   { value: "hsa",             label: "HSA",           hint: "Health Savings Account" },
+];
+
+const LENS_INDEX = [
+  { lens: "narrative", dim: 1024, metric: "cosine" },
+  { lens: "risk", dim: 32, metric: "euclid" },
+  { lens: "yield_source", dim: 16, metric: "cosine" },
+  { lens: "correlation", dim: 8, metric: "cosine" },
+  { lens: "tax_treatment", dim: 12, metric: "cosine" },
+  { lens: "composability", dim: 64, metric: "dot" },
 ];
 
 interface Props {
@@ -41,7 +74,7 @@ interface Persona {
 const PERSONAS: Persona[] = [
   {
     label: "House-buyer",
-    description: "$100k for 12 months. Needs liquidity by month 10. Wants safety, not yield-chasing.",
+    description: "$100k · 12mo · conservative",
     preset: {
       capital_usd: 100_000,
       horizon_months: 12,
@@ -50,12 +83,13 @@ const PERSONAS: Persona[] = [
       min_audit_count: 2,
       min_tvl_usd: 0,
       max_lockup_days: 270,
-      freeform: "I need real liquidity by month 10 because I'm buying a house. Keep things conservative; avoid anything that could lose 20%+ of principal.",
+      freeform:
+        "I need real liquidity by month 10 because I'm buying a house. Keep things conservative; avoid anything that could lose 20%+ of principal.",
     },
   },
   {
-    label: "Conservative retiree",
-    description: "$500k IRA for 36 months. T-bills only, max safety.",
+    label: "Retiree",
+    description: "$500k IRA · max safety",
     preset: {
       capital_usd: 500_000,
       horizon_months: 36,
@@ -64,12 +98,13 @@ const PERSONAS: Persona[] = [
       min_audit_count: 3,
       min_tvl_usd: 50_000_000,
       max_lockup_days: 30,
-      freeform: "I cannot lose principal. T-bills and the most audited stablecoin yields only.",
+      freeform:
+        "I cannot lose principal. T-bills and the most audited stablecoin yields only.",
     },
   },
   {
-    label: "Degen seeker",
-    description: "$10k for 6 months. Points and emissions over safety.",
+    label: "Degen",
+    description: "$10k · 6mo · points",
     preset: {
       capital_usd: 10_000,
       horizon_months: 6,
@@ -78,7 +113,8 @@ const PERSONAS: Persona[] = [
       min_audit_count: 0,
       min_tvl_usd: 0,
       max_lockup_days: null,
-      freeform: "Max yield, I know the risks. Give me points, emissions, LRTs, basis trade - the spicy stuff.",
+      freeform:
+        "Max yield, I know the risks. Give me points, emissions, LRTs, basis trade - the spicy stuff.",
     },
   },
 ];
@@ -104,6 +140,8 @@ export default function FormView({ onAllocation }: Props) {
   });
 
   const currentWrapper = watch("tax_wrapper");
+  const capital = watch("capital_usd");
+  const horizon = watch("horizon_months");
 
   const onSubmit: SubmitHandler<FormDraft> = async (data) => {
     setLoading(true);
@@ -133,334 +171,480 @@ export default function FormView({ onAllocation }: Props) {
     }
   };
 
-  const inputCls =
-    "mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 focus:border-emerald-500 focus:outline-none";
-  const helperCls = "mt-1 text-xs text-zinc-500";
-  const labelTextCls = "text-sm font-medium text-zinc-200";
+  const helperCls = "text-xs";
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* Hero */}
-      <section className="space-y-3">
-        <h2 className="text-2xl font-semibold text-zinc-100">
-          Find a yield portfolio that fits your situation.
-        </h2>
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Cardinal searches <span className="text-zinc-200">83 yield products</span> - DeFi lending,
-          liquid staking, tokenized Treasury bills, and more - and returns a diversified allocation
-          tailored to who you are. Tell us a few things below; you don't need to know crypto jargon.
-        </p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Step n={1} title="You describe yourself">
-            How much, how long, what's your risk tolerance.
-          </Step>
-          <Step n={2} title="Our AI translates">
-            Plain-English notes become a search query.
-          </Step>
-          <Step n={3} title="You get an allocation">
-            A diversified mix with per-protocol explanations.
-          </Step>
-        </div>
-      </section>
-
-      {/* Quick-start personas */}
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-        <div className="mb-1 text-sm font-medium text-zinc-200">
-          New here? Start with a scenario.
-        </div>
-        <div className="mb-3 text-xs text-zinc-500">
-          Click one to fill the form, then tweak whatever you want.
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {PERSONAS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => reset(p.preset)}
-              className="rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-left text-sm transition hover:border-emerald-500"
+    <div style={{ background: BG, color: INK, fontFamily: SANS, minHeight: "100vh" }}>
+      {/* Top nav */}
+      <header className="border-b" style={{ borderColor: BORDER, background: SURFACE }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full" style={{ background: MINT }} />
+            <span className="text-sm font-semibold" style={{ color: INK }}>
+              cardinal
+            </span>
+            <span className="text-xs" style={{ color: INK_3 }}>
+              / yield-discovery
+            </span>
+          </div>
+          <div className="hidden items-center gap-6 text-xs sm:flex" style={{ color: INK_2 }}>
+            <Stat n="83" label="protocols" />
+            <Stat n="6" label="vector lenses" />
+            <Stat n="$2.4B" label="addressable TVL" />
+            <span
+              className="rounded-full px-2 py-0.5 font-medium"
+              style={{ background: MINT_BG, color: MINT }}
             >
-              <div className="font-medium text-zinc-100">{p.label}</div>
-              <div className="mt-0.5 text-xs text-zinc-500">{p.description}</div>
-            </button>
-          ))}
+              ● live
+            </span>
+          </div>
         </div>
-      </section>
+      </header>
 
-      {/* Section: investment basics */}
-      <section className="space-y-4">
-        <h3 className="border-b border-zinc-800 pb-2 text-sm font-semibold uppercase tracking-wide text-zinc-300">
-          About your investment
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className={labelTextCls}>How much are you investing?</span>
-            <input
-              type="number"
-              step="1000"
-              {...register("capital_usd", { required: true })}
-              className={inputCls}
-            />
-            <p className={helperCls}>In US dollars. Round numbers are fine.</p>
-          </label>
-
-          <label className="block">
-            <span className={labelTextCls}>For how long?</span>
-            <input
-              type="number"
-              min={1}
-              max={60}
-              {...register("horizon_months", { required: true })}
-              className={inputCls}
-            />
-            <p className={helperCls}>
-              Months you plan to hold these positions before needing the money back. 1–60.
-            </p>
-          </label>
-        </div>
-      </section>
-
-      {/* Section: account type */}
-      <section className="space-y-4">
-        <h3 className="border-b border-zinc-800 pb-2 text-sm font-semibold uppercase tracking-wide text-zinc-300">
-          What kind of account?
-        </h3>
-        <div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {WRAPPERS.map((w) => (
-              <label
-                key={w.value}
-                className={
-                  "block cursor-pointer rounded border px-3 py-2 text-left transition " +
-                  (currentWrapper === w.value
-                    ? "border-emerald-500 bg-zinc-900"
-                    : "border-zinc-700 bg-zinc-950 hover:border-zinc-500")
-                }
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <main className="mx-auto max-w-6xl px-6 py-12">
+          {/* Hero */}
+          <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
+            <div>
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                style={{ borderColor: BORDER_BRIGHT, color: INK_2, background: SURFACE }}
               >
-                <input
-                  type="radio"
-                  value={w.value}
-                  {...register("tax_wrapper")}
-                  className="sr-only"
-                />
-                <div className="text-sm font-medium text-zinc-100">{w.label}</div>
-                <div className="text-xs text-zinc-500">{w.hint}</div>
-              </label>
+                <span className="font-mono" style={{ color: MINT }}>v1.0</span>
+                <span>·</span>
+                <span>Qdrant Hackathon 2026</span>
+              </div>
+              <h1
+                className="mt-4 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl"
+                style={{ color: INK, letterSpacing: "-0.03em" }}
+              >
+                Yield discovery,{" "}
+                <span style={{ color: MINT }}>
+                  without the
+                  <br />
+                  hallucinations
+                </span>
+                .
+              </h1>
+              <p
+                className="mt-5 max-w-xl text-base leading-relaxed"
+                style={{ color: INK_2 }}
+              >
+                Six named-vector indexes over a curated 83-product catalog (DeFi lending,
+                liquid-staking, RWA T-bills). The LLM only translates your input and
+                narrates the result. Every selection is vector math.
+              </p>
+            </div>
+
+            {/* Lens-index card */}
+            <div
+              className="rounded-md p-5"
+              style={{ background: SURFACE, border: `1px solid ${BORDER}` }}
+            >
+              <div
+                className="mb-3 flex items-center justify-between text-xs"
+                style={{ color: INK_3 }}
+              >
+                <span>Lens index</span>
+                <span style={{ color: MINT }}>● synced</span>
+              </div>
+              <div className="space-y-2">
+                {LENS_INDEX.map(({ lens, dim, metric }) => (
+                  <div
+                    key={lens}
+                    className="flex items-center justify-between rounded border px-3 py-1.5 text-xs"
+                    style={{ borderColor: BORDER, background: SURFACE_2, fontFamily: MONO }}
+                  >
+                    <span style={{ color: INK }}>{lens}</span>
+                    <span style={{ color: INK_3 }}>
+                      <span style={{ color: MINT }}>{dim}d</span> · {metric}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Personas */}
+          <div className="mb-8 flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-wider" style={{ color: INK_3 }}>
+              quick start →
+            </span>
+            {PERSONAS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => reset(p.preset)}
+                className="rounded border bg-white px-3 py-1.5 text-sm transition hover:border-current"
+                style={{ borderColor: BORDER_BRIGHT, color: INK }}
+              >
+                <span className="font-medium">{p.label}</span>
+                <span className="ml-2 font-mono text-xs" style={{ color: INK_3 }}>
+                  {p.description}
+                </span>
+              </button>
             ))}
           </div>
-          <p className={helperCls}>
-            Account type affects which yields are tax-optimal for you. IRAs and HSAs shelter
-            lending interest and T-bill coupons (which would otherwise be taxed as ordinary income).
-            Taxable accounts work fine for anything but tilt slightly toward products with
-            capital-gains treatment when possible.
-          </p>
-        </div>
-      </section>
 
-      {/* Section: safety filters (collapsible) */}
-      <section className="rounded-lg border border-zinc-800">
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen((o) => !o)}
-          className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left hover:bg-zinc-900"
-        >
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-wide text-zinc-300">
-              Safety filters
-            </div>
-            <div className="mt-0.5 text-xs text-zinc-500">
-              Hard floors on audits, protocol size, and lockup duration. Optional - defaults are reasonable.
-            </div>
-          </div>
-          <span className="text-zinc-400">{advancedOpen ? "▼" : "▶"}</span>
-        </button>
-
-        {advancedOpen && (
-          <div className="space-y-4 border-t border-zinc-800 p-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <label className="block">
-                <span className={labelTextCls}>Min security audits</span>
+          {/* Main form grid */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card title="Capital" hint="USD principal you want allocated">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl" style={{ color: INK_3, fontFamily: MONO }}>$</span>
                 <input
+                  {...register("capital_usd", { required: true, valueAsNumber: true })}
                   type="number"
-                  min={0}
-                  {...register("min_audit_count")}
-                  className={inputCls}
+                  step="1000"
+                  className="w-full bg-transparent text-4xl font-semibold outline-none"
+                  style={{
+                    color: INK,
+                    fontFamily: MONO,
+                    letterSpacing: "-0.02em",
+                    caretColor: MINT_BRIGHT,
+                  }}
                 />
-                <p className={helperCls}>
-                  Independent security reviews of the protocol's smart contracts. More audits =
-                  generally safer code. <span className="text-zinc-400">0</span> = no minimum.
-                  <span className="text-zinc-400"> 3+</span> for conservative.
-                </p>
-              </label>
-
-              <label className="block">
-                <span className={labelTextCls}>Min protocol size (USD)</span>
-                <input
-                  type="number"
-                  step="1000000"
-                  {...register("min_tvl_usd")}
-                  className={inputCls}
-                />
-                <p className={helperCls}>
-                  Total Value Locked - roughly how much money is currently in the protocol.
-                  Bigger = more battle-tested. Suggested ≥ $5M; pickier users use $50M+.
-                </p>
-              </label>
-
-              <label className="block">
-                <span className={labelTextCls}>Max lockup (days)</span>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="any"
-                  {...register("max_lockup_days")}
-                  className={inputCls}
-                />
-                <p className={helperCls}>
-                  Days your funds may be inaccessible. Some yields require a lockup for higher
-                  returns. Leave blank for no maximum.
-                </p>
-              </label>
-            </div>
-
-            <fieldset>
-              <legend className={labelTextCls}>Blockchains to avoid</legend>
-              <p className={helperCls + " mb-2"}>
-                Different blockchain networks have different security profiles and ecosystems.
-                Check any you want to exclude entirely.
+              </div>
+              <p className={helperCls} style={{ color: INK_3, marginTop: 8 }}>
+                {Number(capital || 0).toLocaleString()} USD · round numbers are fine
               </p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_CHAINS.map((c) => (
+            </Card>
+
+            <Card title="Horizon" hint="Months you plan to hold before needing the funds">
+              <div className="flex items-baseline justify-between">
+                <input
+                  {...register("horizon_months", {
+                    required: true,
+                    valueAsNumber: true,
+                    min: 1,
+                    max: 60,
+                  })}
+                  type="number"
+                  min={1}
+                  max={60}
+                  className="w-24 bg-transparent text-4xl font-semibold outline-none"
+                  style={{
+                    color: INK,
+                    fontFamily: MONO,
+                    letterSpacing: "-0.02em",
+                    caretColor: MINT_BRIGHT,
+                  }}
+                />
+                <span className="text-sm" style={{ color: INK_3 }}>months</span>
+              </div>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full"
+                style={{ background: BORDER }}
+              >
+                <div
+                  className="h-full transition-all"
+                  style={{
+                    width: `${(Number(horizon || 12) / 60) * 100}%`,
+                    background: `linear-gradient(90deg, ${MINT}, ${MINT_BRIGHT})`,
+                  }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-xs" style={{ color: INK_3 }}>
+                <span>1mo</span>
+                <span>60mo</span>
+              </div>
+            </Card>
+
+            <Card
+              title="Account"
+              hint="Tax wrapper determines which yields are optimal for you"
+              full
+            >
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {WRAPPERS.map((w) => (
                   <label
-                    key={c.value}
-                    className="inline-flex items-center gap-2 rounded border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-sm hover:border-zinc-500"
+                    key={w.value}
+                    className="block cursor-pointer rounded px-3 py-2.5 text-left text-sm transition"
+                    style={{
+                      background: currentWrapper === w.value ? MINT_BG : SURFACE,
+                      border: `1px solid ${currentWrapper === w.value ? MINT : BORDER}`,
+                      color: currentWrapper === w.value ? MINT : INK,
+                      fontWeight: currentWrapper === w.value ? 600 : 400,
+                    }}
                   >
-                    <input type="checkbox" value={c.value} {...register("excluded_chains")} />
-                    {c.label}
+                    <input
+                      type="radio"
+                      value={w.value}
+                      {...register("tax_wrapper")}
+                      className="sr-only"
+                    />
+                    <div>{w.label}</div>
+                    <div
+                      className="mt-0.5 text-xs"
+                      style={{
+                        color: currentWrapper === w.value ? MINT : INK_3,
+                        fontWeight: 400,
+                      }}
+                    >
+                      {w.hint}
+                    </div>
                   </label>
                 ))}
               </div>
-            </fieldset>
-          </div>
-        )}
-      </section>
+            </Card>
 
-      {/* Section: personalize (existing collapsible components) */}
-      <section className="space-y-3">
-        <h3 className="border-b border-zinc-800 pb-2 text-sm font-semibold uppercase tracking-wide text-zinc-300">
-          Personalize (optional)
-        </h3>
-        <p className="text-xs text-zinc-500">
-          Three optional ways to shape the result - rank your preferred yield types, tell us how
-          you behaved in past crashes, or choose how we weight the math.
-        </p>
-
-        <YieldSourceRank ranking={yieldRanking} onChange={setYieldRanking} />
-        <DrawdownSwipeStack decisions={swipes} onChange={setSwipes} />
-
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <div className="mb-1 text-sm font-medium text-zinc-200">Math approach</div>
-          <div className="mb-2 text-xs text-zinc-500">
-            How we choose weights within the candidate set.
-          </div>
-          <div className="inline-flex rounded border border-zinc-700 bg-zinc-950 p-1">
-            <button
-              type="button"
-              onClick={() => setOptimizer("weighted_sum")}
-              className={
-                "rounded px-3 py-1 text-sm " +
-                (optimizer === "weighted_sum"
-                  ? "bg-emerald-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-200")
-              }
+            <Card
+              title="Safety floors"
+              hint="Hard filters — protocols below these are excluded entirely"
+              full
             >
-              Risk-weighted average
-            </button>
-            <button
-              type="button"
-              onClick={() => setOptimizer("mean_variance")}
-              className={
-                "rounded px-3 py-1 text-sm " +
-                (optimizer === "mean_variance"
-                  ? "bg-emerald-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-200")
-              }
+              <div className="grid grid-cols-3 gap-2">
+                <SafetyChip label="audits ≥">
+                  <input
+                    {...register("min_audit_count", { valueAsNumber: true })}
+                    type="number"
+                    min={0}
+                    className="w-full bg-transparent text-xl font-semibold outline-none"
+                    style={{ color: INK, fontFamily: MONO, caretColor: MINT_BRIGHT }}
+                  />
+                </SafetyChip>
+                <SafetyChip label="TVL ≥ USD">
+                  <input
+                    {...register("min_tvl_usd", { valueAsNumber: true })}
+                    type="number"
+                    step="1000000"
+                    className="w-full bg-transparent text-xl font-semibold outline-none"
+                    style={{ color: INK, fontFamily: MONO, caretColor: MINT_BRIGHT }}
+                  />
+                </SafetyChip>
+                <SafetyChip label="lockup ≤ days">
+                  <input
+                    {...register("max_lockup_days")}
+                    type="number"
+                    min={0}
+                    placeholder="any"
+                    className="w-full bg-transparent text-xl font-semibold outline-none placeholder:font-normal placeholder:italic"
+                    style={{ color: INK, fontFamily: MONO, caretColor: MINT_BRIGHT }}
+                  />
+                </SafetyChip>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((o) => !o)}
+                className="mt-3 text-xs transition hover:text-current"
+                style={{ color: MINT }}
+              >
+                {advancedOpen ? "− hide" : "+ advanced"} (excluded chains)
+              </button>
+              {advancedOpen && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ALL_CHAINS.map((c) => (
+                    <label
+                      key={c.value}
+                      className="inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm transition hover:border-current"
+                      style={{ borderColor: BORDER_BRIGHT, color: INK_2, background: SURFACE_2 }}
+                    >
+                      <input
+                        type="checkbox"
+                        value={c.value}
+                        {...register("excluded_chains")}
+                        style={{ accentColor: MINT }}
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Personalize (collapsible optional shapers) */}
+            <Card
+              title="Personalize"
+              hint="Optional. Rank preferred yield sources, calibrate risk tolerance, or change the optimizer."
+              full
             >
-              Markowitz (min-variance)
-            </button>
+              <div className="space-y-3">
+                <YieldSourceRank ranking={yieldRanking} onChange={setYieldRanking} />
+                <DrawdownSwipeStack decisions={swipes} onChange={setSwipes} />
+                <div
+                  className="rounded-md p-4"
+                  style={{ background: SURFACE_2, border: `1px solid ${BORDER}` }}
+                >
+                  <div className="mb-2 text-sm font-medium" style={{ color: INK }}>
+                    Math approach
+                  </div>
+                  <div
+                    className="inline-flex rounded border p-1"
+                    style={{ borderColor: BORDER_BRIGHT, background: SURFACE }}
+                  >
+                    {[
+                      ["weighted_sum", "Risk-weighted average"],
+                      ["mean_variance", "Markowitz (min-variance)"],
+                    ].map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setOptimizer(val as OptimizerName)}
+                        className="rounded px-3 py-1 text-sm transition"
+                        style={{
+                          background: optimizer === val ? MINT : "transparent",
+                          color: optimizer === val ? SURFACE : INK_2,
+                          fontWeight: optimizer === val ? 600 : 400,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={helperCls} style={{ color: INK_3, marginTop: 8 }}>
+                    {optimizer === "weighted_sum"
+                      ? "Default. Best matches by similarity, weighted by safety (lower drawdown gets more allocation)."
+                      : "Classical mean-variance. Minimizes portfolio variance subject to a return floor; tends to find unrelated protocols."}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card title="Freeform" hint="Plain English — translated to a structured query." full>
+              <textarea
+                {...register("freeform")}
+                rows={3}
+                placeholder="e.g. 'I need the money in 10 months for a house down payment. Keep it boring.'"
+                className="w-full resize-none bg-transparent text-base outline-none placeholder:italic"
+                style={{ color: INK, caretColor: MINT_BRIGHT }}
+              />
+              <p className={helperCls} style={{ color: INK_3 }}>
+                Mention life events, protocols you trust or avoid, anything context-specific.
+                A sentence like "I need the money in 10 months" automatically caps the lockup
+                duration considered.
+              </p>
+            </Card>
           </div>
-          <p className="mt-2 text-xs text-zinc-500">
-            {optimizer === "weighted_sum"
-              ? "Default. Picks the best matches by similarity to your inputs, then weights by safety (lower drawdown gets more allocation). Respects what you said you care about."
-              : "Classical portfolio theory: minimize total variance subject to a return floor. Tends to spread weight to find unrelated protocols. Can produce surprising diversifications, possibly lower yield."}
-          </p>
-        </div>
-      </section>
 
-      {/* Section: freeform */}
-      <section className="space-y-2">
-        <h3 className="border-b border-zinc-800 pb-2 text-sm font-semibold uppercase tracking-wide text-zinc-300">
-          In your own words (optional)
-        </h3>
-        <label className="block">
-          <span className={labelTextCls}>Anything else worth knowing?</span>
-          <textarea
-            rows={4}
-            placeholder="e.g. 'I need the money in 10 months for a house down payment. Keep it boring.'"
-            {...register("freeform")}
-            className={inputCls}
-          />
-          <p className={helperCls}>
-            Tell us about life events you're saving for, specific protocols you trust or distrust,
-            yields that burned you in the past, or anything else context-specific. Our AI translates
-            this into search filters and concerns - so a sentence like "I need the money in 10
-            months" automatically caps the lockup duration we'll consider.
-          </p>
-        </label>
-      </section>
+          {error && (
+            <div
+              className="mt-4 rounded-md border px-4 py-3 text-sm"
+              style={{
+                background: DANGER_BG,
+                borderColor: DANGER,
+                color: DANGER,
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-      {error && (
-        <div className="rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="inline-flex items-center gap-2 rounded bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {loading && (
-          <svg
-            className="h-4 w-4 animate-spin"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
+          {/* CTA */}
+          <div
+            className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-md p-5"
+            style={{ background: SURFACE, border: `1px solid ${BORDER_BRIGHT}` }}
           >
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-            <path
-              d="M12 2a10 10 0 0 1 10 10"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-          </svg>
-        )}
-        {loading ? "Generating your allocation…" : "Generate my allocation"}
-      </button>
-    </form>
+            <div>
+              <div className="text-sm font-medium" style={{ color: INK }}>
+                Ready to query the index.
+              </div>
+              <div className="mt-0.5 text-xs" style={{ color: INK_3, fontFamily: MONO }}>
+                estimated p50 latency: 2.1s · vector ops: 6 · payload filter: 4
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ background: MINT, color: SURFACE }}
+            >
+              {loading && (
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeOpacity="0.35"
+                    strokeWidth="4"
+                  />
+                  <path
+                    d="M12 2a10 10 0 0 1 10 10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
+              {loading ? "Running allocation…" : "Run allocation →"}
+            </button>
+          </div>
+
+          <footer
+            className="mt-12 border-t pt-6 text-xs"
+            style={{ borderColor: BORDER, color: INK_3 }}
+          >
+            <span>Cardinal · Qdrant Hackathon 2026 · </span>
+            <a
+              href="https://github.com/yoyobeverage/cardinal"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: MINT }}
+              className="hover:underline"
+            >
+              github
+            </a>
+          </footer>
+        </main>
+      </form>
+    </div>
   );
 }
 
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+function Card({
+  title,
+  hint,
+  children,
+  full,
+}: {
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
-          {n}
+    <section
+      className={"rounded-md p-5 " + (full ? "lg:col-span-2" : "")}
+      style={{ background: SURFACE, border: `1px solid ${BORDER}` }}
+    >
+      <div className="mb-3 flex items-baseline justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: INK_2 }}>
+          {title}
+        </h3>
+        <span className="text-xs" style={{ color: INK_3 }}>
+          {hint}
         </span>
-        <span className="text-sm font-medium text-zinc-200">{title}</span>
       </div>
-      <p className="mt-1 text-xs text-zinc-500">{children}</p>
+      {children}
+    </section>
+  );
+}
+
+function Stat({ n, label }: { n: string; label: string }) {
+  return (
+    <span>
+      <span className="font-semibold" style={{ color: INK, fontFamily: MONO }}>
+        {n}
+      </span>{" "}
+      <span style={{ color: INK_3 }}>{label}</span>
+    </span>
+  );
+}
+
+function SafetyChip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="rounded border px-3 py-2"
+      style={{ borderColor: BORDER, background: SURFACE_2 }}
+    >
+      <div className="text-xs" style={{ color: INK_3 }}>
+        {label}
+      </div>
+      <div className="mt-0.5">{children}</div>
     </div>
   );
 }

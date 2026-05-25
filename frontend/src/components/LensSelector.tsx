@@ -1,3 +1,5 @@
+import { BORDER, INK_2, MINT, SURFACE, SURFACE_2 } from "../theme";
+
 interface Props {
   lenses: string[];
   current: string;
@@ -15,7 +17,10 @@ const LABELS: Record<string, string> = {
 
 export default function LensSelector({ lenses, current, onChange }: Props) {
   return (
-    <div className="inline-flex rounded border border-zinc-800 bg-zinc-900 p-1">
+    <div
+      className="inline-flex flex-wrap rounded border p-1"
+      style={{ borderColor: BORDER, background: SURFACE_2 }}
+    >
       {lenses.map((lens) => {
         const active = lens === current;
         return (
@@ -23,12 +28,12 @@ export default function LensSelector({ lenses, current, onChange }: Props) {
             key={lens}
             type="button"
             onClick={() => onChange(lens)}
-            className={
-              "rounded px-3 py-1 text-sm transition " +
-              (active
-                ? "bg-emerald-600 text-white"
-                : "text-zinc-400 hover:text-zinc-200")
-            }
+            className="rounded px-3 py-1 text-sm transition"
+            style={{
+              background: active ? MINT : "transparent",
+              color: active ? SURFACE : INK_2,
+              fontWeight: active ? 600 : 400,
+            }}
           >
             {LABELS[lens] ?? lens}
           </button>

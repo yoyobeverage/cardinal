@@ -98,28 +98,28 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
   };
 
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900">
+    <div className="rounded border border-[#e6e1d3] bg-[#fbf8f1]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <div>
-          <div className="text-sm text-zinc-200">
+          <div className="text-sm text-[#0a1f4a]">
             How did you feel during past crashes? · optional
           </div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-[#7d8499]">
             {decisions.length === 0
               ? "Skip - or answer 5 quick questions about real historical crashes to calibrate your risk tolerance."
               : `${decisions.length} / 5 answered`}
           </div>
         </div>
-        <span className="text-zinc-400">{open ? "▼" : "▶"}</span>
+        <span className="text-[#7d8499]">{open ? "▼" : "▶"}</span>
       </button>
 
       {open && (
-        <div className="space-y-3 border-t border-zinc-800 px-4 pb-4 pt-3">
-          <p className="text-xs text-zinc-500">
+        <div className="space-y-3 border-t border-[#e6e1d3] px-4 pb-4 pt-3">
+          <p className="text-xs text-[#7d8499]">
             Each card shows what really happened during a famous crypto blow-up. Tell us whether
             you would have held through it or sold - your answers steer the recommendations toward
             protocols that match the risk appetite your choices reveal.
@@ -129,19 +129,19 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
             return (
               <div
                 key={s.id}
-                className="rounded border border-zinc-800 bg-zinc-950 p-3"
+                className="rounded border border-[#e6e1d3] bg-white p-3"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-zinc-200">
+                    <div className="text-sm font-medium text-[#0a1f4a]">
                       {s.title} · {s.date}
                     </div>
-                    <div className="mt-0.5 text-xs text-zinc-500">{s.description}</div>
+                    <div className="mt-0.5 text-xs text-[#7d8499]">{s.description}</div>
                   </div>
                 </div>
                 <div className="mt-2 flex items-center gap-4">
                   <div className="h-16 w-32">
-                    <Suspense fallback={<div className="h-full w-full animate-pulse rounded bg-zinc-900" />}>
+                    <Suspense fallback={<div className="h-full w-full animate-pulse rounded bg-[#fbf8f1]" />}>
                       <DrawdownChart data={s.chartData} />
                     </Suspense>
                   </div>
@@ -152,8 +152,8 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
                       className={
                         "rounded px-3 py-1.5 text-xs " +
                         (choice === "held"
-                          ? "bg-emerald-600 text-white"
-                          : "border border-zinc-700 text-zinc-300 hover:border-emerald-500")
+                          ? "bg-[#0d7378] text-white"
+                          : "border border-[#d4cdb8] text-[#3a4a6a] hover:border-[#0d7378]")
                       }
                     >
                       I held
@@ -164,8 +164,8 @@ export default function DrawdownSwipeStack({ decisions, onChange }: Props) {
                       className={
                         "rounded px-3 py-1.5 text-xs " +
                         (choice === "sold"
-                          ? "bg-rose-600 text-white"
-                          : "border border-zinc-700 text-zinc-300 hover:border-rose-500")
+                          ? "bg-[#b91c1c] text-white"
+                          : "border border-[#d4cdb8] text-[#3a4a6a] hover:border-[#b91c1c]")
                       }
                     >
                       I sold

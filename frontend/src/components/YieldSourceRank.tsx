@@ -69,10 +69,10 @@ function SortableItem({ id, index }: SortableItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="flex cursor-grab items-center gap-3 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 hover:border-emerald-500 active:cursor-grabbing"
+      className="flex cursor-grab items-center gap-3 rounded border border-[#d4cdb8] bg-white px-3 py-2 text-sm text-[#0a1f4a] hover:border-[#0d7378] active:cursor-grabbing"
     >
-      <span className="text-zinc-500 select-none">≡</span>
-      <span className="w-6 text-right font-mono text-xs text-zinc-500">{index + 1}.</span>
+      <span className="select-none text-[#7d8499]">≡</span>
+      <span className="w-6 text-right font-mono text-xs text-[#7d8499]">{index + 1}.</span>
       <span>{LABELS[id]}</span>
     </div>
   );
@@ -97,26 +97,26 @@ export default function YieldSourceRank({ ranking, onChange }: Props) {
   };
 
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900">
+    <div className="rounded border border-[#e6e1d3] bg-[#fbf8f1]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <div>
-          <div className="text-sm text-zinc-200">Where should your yield come from? · optional</div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-sm text-[#0a1f4a]">Where should your yield come from? · optional</div>
+          <div className="text-xs text-[#7d8499]">
             {ranking.length === 0
               ? "Skip - or drag to rank your preferred sources of yield (real cash flow, fees, points, etc.)."
               : `Top: ${LABELS[items[0]]}`}
           </div>
         </div>
-        <span className="text-zinc-400">{open ? "▼" : "▶"}</span>
+        <span className="text-[#7d8499]">{open ? "▼" : "▶"}</span>
       </button>
 
       {open && (
-        <div className="space-y-3 border-t border-zinc-800 px-4 pb-4 pt-3">
-          <p className="text-xs text-zinc-500">
+        <div className="space-y-3 border-t border-[#e6e1d3] px-4 pb-4 pt-3">
+          <p className="text-xs text-[#7d8499]">
             Drag to reorder. The kind of yield at the top will pull the recommendations toward
             protocols whose returns come from that source. "Real yield" means cash flows from
             actual revenue (loan interest, T-bill coupons); "points / airdrops" means speculative
