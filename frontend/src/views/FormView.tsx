@@ -48,13 +48,60 @@ const WRAPPERS: { value: TaxWrapper; label: string; hint: string }[] = [
   { value: "hsa",             label: "HSA",           hint: "Health Savings Account" },
 ];
 
-const LENS_INDEX = [
-  { lens: "narrative", dim: 1024, metric: "cosine" },
-  { lens: "risk", dim: 32, metric: "euclid" },
-  { lens: "yield_source", dim: 16, metric: "cosine" },
-  { lens: "correlation", dim: 8, metric: "cosine" },
-  { lens: "tax_treatment", dim: 12, metric: "cosine" },
-  { lens: "composability", dim: 64, metric: "dot" },
+// Each lens has a plain-English explainer shown on hover. `d` = dimensions
+// (the number of features in each protocol's vector for this lens). The
+// distance metric is whatever math best fits the data shape: cosine for
+// direction-only embeddings (text, mixes, correlations), Euclidean for
+// real-magnitude numbers (risk profile), dot product for graph embeddings
+// where both direction and magnitude matter (composability).
+const LENS_INDEX: {
+  lens: string;
+  dim: number;
+  metric: string;
+  explainer: string;
+}[] = [
+  {
+    lens: "narrative",
+    dim: 1024,
+    metric: "cosine",
+    explainer:
+      "What this protocol is *about*. A text-embedding model (BGE-large) converts the description, product, and audit profile into 1024 numbers. Cosine = compares the meaning, not the length.",
+  },
+  {
+    lens: "risk",
+    dim: 32,
+    metric: "euclid",
+    explainer:
+      "Hand-engineered safety profile: drawdown, audit count, audit-firm reputation, lockup days, custody type, oracle diversity, etc. Each of the 32 numbers is in [0,1] so straight-line (Euclidean) distance is the right way to compare.",
+  },
+  {
+    lens: "yield_source",
+    dim: 16,
+    metric: "cosine",
+    explainer:
+      "Where the yield actually comes from: real cash flow, lending spread, AMM fees, points/airdrops, restaking rewards, etc. Cosine compares the mix of sources, not the total amount.",
+  },
+  {
+    lens: "correlation",
+    dim: 8,
+    metric: "cosine",
+    explainer:
+      "How this protocol's APY moves with macro assets: BTC, ETH, S&P 500, US Treasuries, gold, etc. Useful for spotting hidden concentration risk — protocols that look unrelated may all move with ETH.",
+  },
+  {
+    lens: "tax_treatment",
+    dim: 12,
+    metric: "cosine",
+    explainer:
+      "How the IRS treats this yield: ordinary income, qualified dividend, capital gain, return of capital, QBI, etc. Used to tilt the allocation toward tax-optimal products for your account type.",
+  },
+  {
+    lens: "composability",
+    dim: 64,
+    metric: "dot",
+    explainer:
+      "Which other protocols accept this one's receipt tokens (e.g., stETH gets deposited into Aave, Morpho, Pendle, Curve). Computed by running node2vec on a hand-curated graph. Dot product preserves both direction and magnitude so high-degree hubs register prominently.",
+  },
 ];
 
 interface Props {
@@ -242,23 +289,46 @@ export default function FormView({ onAllocation }: Props) {
               style={{ background: SURFACE, border: `1px solid ${BORDER}` }}
             >
               <div
-                className="mb-3 flex items-center justify-between text-xs"
+                className="mb-3 flex items-baseline justify-between text-xs"
                 style={{ color: INK_3 }}
               >
                 <span>Lens index</span>
-                <span style={{ color: MINT }}>● synced</span>
+                <span className="italic">hover any row for details</span>
               </div>
               <div className="space-y-2">
-                {LENS_INDEX.map(({ lens, dim, metric }) => (
-                  <div
-                    key={lens}
-                    className="flex items-center justify-between rounded border px-3 py-1.5 text-xs"
-                    style={{ borderColor: BORDER, background: SURFACE_2, fontFamily: MONO }}
-                  >
-                    <span style={{ color: INK }}>{lens}</span>
-                    <span style={{ color: INK_3 }}>
-                      <span style={{ color: MINT }}>{dim}d</span> · {metric}
-                    </span>
+                {LENS_INDEX.map(({ lens, dim, metric, explainer }) => (
+                  <div key={lens} className="group relative">
+                    <div
+                      className="flex cursor-help items-center justify-between rounded border px-3 py-1.5 text-xs transition group-hover:border-current"
+                      style={{
+                        borderColor: BORDER,
+                        background: SURFACE_2,
+                        fontFamily: MONO,
+                        color: INK_3,
+                      }}
+                    >
+                      <span style={{ color: INK }}>{lens}</span>
+                      <span>
+                        <span style={{ color: MINT }}>{dim}d</span> · {metric}
+                      </span>
+                    </div>
+                    {/* Tooltip: pops to the LEFT of the card, doesn't block hover on other rows */}
+                    <div
+                      className="pointer-events-none absolute right-full top-1/2 z-50 mr-3 hidden w-80 -translate-y-1/2 rounded-md px-4 py-3 text-xs leading-relaxed shadow-xl group-hover:block"
+                      style={{
+                        background: INK,
+                        color: "#e6eaf2",
+                        fontFamily: SANS,
+                      }}
+                    >
+                      <div
+                        className="mb-1.5 font-semibold"
+                        style={{ color: MINT, fontFamily: MONO }}
+                      >
+                        {lens} · {dim} dimensions · {metric}
+                      </div>
+                      <div>{explainer}</div>
+                    </div>
                   </div>
                 ))}
               </div>
