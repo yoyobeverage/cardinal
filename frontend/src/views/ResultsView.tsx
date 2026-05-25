@@ -107,7 +107,7 @@ export default function ResultsView({ allocation, onBack }: Props) {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-10 px-6 py-10">
-        {/* Allocation bar section */}
+        {/* Allocation bar + summary stats */}
         <section>
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-2xl font-semibold tracking-tight" style={{ color: INK }}>
@@ -117,6 +117,7 @@ export default function ResultsView({ allocation, onBack }: Props) {
               {allocation.positions.length} positions · click any to inspect
             </span>
           </div>
+          <SummaryStats positions={allocation.positions} />
           <AllocationBar
             positions={allocation.positions}
             onPositionClick={openAllocatedPosition}
@@ -193,6 +194,105 @@ export default function ResultsView({ allocation, onBack }: Props) {
       </main>
 
       <DrilldownDrawer subject={subject} onClose={() => setSubject(null)} />
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Summary stats: 4 portfolio-level numbers shown above the allocation bar.
+// All metrics are weight-aware (sum_i w_i * x_i) so they represent the
+// portfolio's behavior, not the average of the components.
+// ----------------------------------------------------------------------------
+function SummaryStats({ positions }: { positions: Position[] }) {
+  if (positions.length === 0) return null;
+
+  const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1;
+
+  // Weighted-average APY: portfolio's headline yield.
+  const weightedApy =
+    positions.reduce((s, p) => s + p.weight * p.payload.current_apy, 0) / totalWeight;
+
+  // Weighted-average max 1y drawdown: the portfolio's expected worst-case
+  // loss over a 1-year window, given each protocol's historical worst.
+  // Conservative since real drawdowns correlate, but a defensible upper bound.
+  const expectedDrawdown =
+    positions.reduce((s, p) => s + p.weight * p.payload.max_drawdown_1y, 0) / totalWeight;
+
+  // Weighted-average audit count: how thoroughly audited the portfolio is.
+  const avgAudits =
+    positions.reduce((s, p) => s + p.weight * p.payload.audit_count, 0) / totalWeight;
+
+  // Effective number of positions (1 / sum of squared weights). Inverse of
+  // the Herfindahl-Hirschman Index. For N equal-weight positions this equals
+  // N; concentration drives it below the position count.
+  const sumSq = positions.reduce((s, p) => s + p.weight * p.weight, 0);
+  const effectivePositions = sumSq > 0 ? 1 / sumSq : 0;
+
+  return (
+    <div
+      className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
+    >
+      <Stat
+        label="Weighted APY"
+        value={`${weightedApy.toFixed(2)}%`}
+        hint="Portfolio-level yield, weighted by position size"
+        positive
+      />
+      <Stat
+        label="Expected 1y drawdown"
+        value={`-${(expectedDrawdown * 100).toFixed(1)}%`}
+        hint="Weighted-avg of each protocol's historical worst 12mo loss"
+        negative
+      />
+      <Stat
+        label="Mean audit count"
+        value={avgAudits.toFixed(1)}
+        hint="Weighted-avg # of independent security audits"
+      />
+      <Stat
+        label="Effective positions"
+        value={effectivePositions.toFixed(1)}
+        hint={`Diversification (1/HHI). ${positions.length} actual, ${effectivePositions.toFixed(1)} effective.`}
+      />
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+  positive,
+  negative,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  positive?: boolean;
+  negative?: boolean;
+}) {
+  const accent = positive ? "#0d7378" : negative ? "#b91c1c" : INK;
+  return (
+    <div
+      className="rounded-md p-4"
+      style={{ background: SURFACE, border: `1px solid ${BORDER}` }}
+      title={hint}
+    >
+      <div
+        className="text-[10px] font-semibold uppercase tracking-wider"
+        style={{ color: INK_3 }}
+      >
+        {label}
+      </div>
+      <div
+        className="mt-1 text-2xl font-semibold"
+        style={{ color: accent, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.02em" }}
+      >
+        {value}
+      </div>
+      <div className="mt-1 text-[11px] leading-snug" style={{ color: INK_3 }}>
+        {hint}
+      </div>
     </div>
   );
 }

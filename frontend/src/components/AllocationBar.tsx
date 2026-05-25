@@ -24,6 +24,9 @@ export default function AllocationBar({ positions, onPositionClick }: Props) {
   }
 
   const total = positions.reduce((sum, p) => sum + p.dollars, 0);
+  const totalWeight = positions.reduce((sum, p) => sum + p.weight, 0) || 1;
+  const weightedApy =
+    positions.reduce((sum, p) => sum + p.weight * p.payload.current_apy, 0) / totalWeight;
 
   return (
     <div className="space-y-4">
@@ -126,7 +129,13 @@ export default function AllocationBar({ positions, onPositionClick }: Props) {
               >
                 ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </td>
-              <td style={{ background: SURFACE_2 }} />
+              <td
+                className="py-2.5 text-right font-semibold"
+                style={{ color: INK, fontFamily: MONO }}
+                title="Weighted-average APY across all positions"
+              >
+                {weightedApy.toFixed(2)}%
+              </td>
             </tr>
           </tbody>
         </table>
