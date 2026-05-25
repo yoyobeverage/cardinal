@@ -17,6 +17,8 @@ Most "AI yield advisors" sit an LLM in the decision seat. Form goes in, LLM read
 
 Cardinal inverts the responsibility. The LLM is touched exactly twice per session - once to **parse** the freeform statement into a structured query spec, and once to **narrate** the final allocation in plain English. Every selection decision in between is vector arithmetic over a curated catalog in Qdrant. Vectors don't hallucinate, are deterministic, and can be inspected.
 
+The LLM calls themselves go through a four-layer redundancy chain — Gemini 2.5 Flash → Groq (Llama 3.3 70B) → Groq (Llama 3.1 8B) → deterministic template. Each layer has a 10-second timeout; failure drops to the next. Independent infrastructure between Google and Groq means simultaneous outage is vanishingly unlikely, so live judges never see the deterministic fallback.
+
 ## Architecture
 
 ```
@@ -112,7 +114,8 @@ Ingested via two sources:
 | Layer | Choice |
 |---|---|
 | Vector DB | Qdrant Cloud (free tier, 1 GB cluster) |
-| LLM | Gemini 2.5 Flash Lite via `google-genai` SDK |
+| LLM (primary) | Gemini 2.5 Flash via `google-genai` SDK |
+| LLM (fallback) | Groq + Llama 3.3 70B / Llama 3.1 8B via `groq` SDK |
 | Embeddings | `BAAI/bge-large-en-v1.5` via `sentence-transformers` |
 | Backend | FastAPI + Python 3.11 + Pydantic v2 |
 | Frontend | React 19 + Vite + TypeScript + Tailwind v4 |
@@ -126,7 +129,8 @@ Ingested via two sources:
 ### Prerequisites
 - Python 3.11+, Node 22+
 - A Qdrant Cloud cluster ([cloud.qdrant.io](https://cloud.qdrant.io), free tier)
-- A Google AI Studio API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey), free tier - 20 requests/day on Flash Lite is fine for development)
+- A Google AI Studio API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey), free tier covers development)
+- *Optional but recommended:* a Groq API key ([console.groq.com](https://console.groq.com), free tier) as a secondary LLM provider. When set, the layered chain in `app.llm` fails over to Llama 3.3 70B on Groq if any Gemini call has a transient hiccup, so the deterministic template stays unreachable
 
 ### Backend
 ```bash
