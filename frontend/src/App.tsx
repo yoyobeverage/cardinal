@@ -6,6 +6,9 @@ import DemoIndex from "./views/demo/DemoIndex";
 import FormFTEditorial from "./views/demo/FormFTEditorial";
 import FormTerminal from "./views/demo/FormTerminal";
 import FormMercury from "./views/demo/FormMercury";
+import FormDeFiNative from "./views/demo/FormDeFiNative";
+import FormSwiss from "./views/demo/FormSwiss";
+import FormMagazine from "./views/demo/FormMagazine";
 import type { Allocation } from "./types";
 
 // Minimal path-based routing. Avoids react-router for a 5-route SPA.
@@ -29,6 +32,9 @@ export default function App() {
   if (path === "/demo/ft") return <FormFTEditorial />;
   if (path === "/demo/terminal") return <FormTerminal />;
   if (path === "/demo/mercury") return <FormMercury />;
+  if (path === "/demo/defi") return <FormDeFiNative />;
+  if (path === "/demo/swiss") return <FormSwiss />;
+  if (path === "/demo/magazine") return <FormMagazine />;
 
   // Default app shell - existing production form.
   return (
