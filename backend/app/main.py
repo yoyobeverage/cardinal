@@ -14,7 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import catalog, llm, optimizer, qdrant_client
@@ -137,7 +137,7 @@ def protocol_detail(protocol_id: str, anchors: str = "") -> dict:
     cat = catalog.load_catalog()
     payload = cat.get(protocol_id)
     if payload is None:
-        return {"error": "unknown protocol_id"}
+        raise HTTPException(status_code=404, detail=f"unknown protocol_id: {protocol_id}")
 
     per_lens_scores: dict[str, float] = {}
     anchor_list = [a.strip() for a in anchors.split(",") if a.strip()]

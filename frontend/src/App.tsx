@@ -42,10 +42,18 @@ export default function App() {
   if (path === "/demo/defi-light") return <FormDeFiLight />;
   if (path === "/demo/hybrid") return <FormHybrid />;
 
-  // Production routes - FormView and ResultsView each carry their own layout.
-  return allocation ? (
-    <ResultsView allocation={allocation} onBack={() => setAllocation(null)} />
-  ) : (
-    <FormView onAllocation={setAllocation} />
+  // Production routes - both views stay mounted so FormView's react-hook-form
+  // state (and the optional persona/swipes/ranking state) survives across
+  // submit → results → back navigation. ResultsView only mounts when there's
+  // an allocation to display.
+  return (
+    <>
+      <div style={{ display: allocation ? "none" : "block" }}>
+        <FormView onAllocation={setAllocation} />
+      </div>
+      {allocation && (
+        <ResultsView allocation={allocation} onBack={() => setAllocation(null)} />
+      )}
+    </>
   );
 }
