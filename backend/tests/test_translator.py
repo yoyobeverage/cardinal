@@ -7,6 +7,15 @@ from app.llm import fallback_spec, translate
 from app.schemas import Chain, FormInput, QuerySpec, TaxWrapper
 
 
+@pytest.fixture(autouse=True)
+def _disable_groq_in_tests():
+    """All translator tests run with the Groq layer disabled - we exercise
+    only the Gemini path and the deterministic last-resort. Patches the
+    cached client factory to return None (the same code path as 'no GROQ_API_KEY')."""
+    with patch("app.llm._groq_client", return_value=None):
+        yield
+
+
 @pytest.fixture
 def basic_form() -> FormInput:
     return FormInput(
@@ -42,11 +51,9 @@ def test_fallback_for_ira_biases_to_rwa_or_savings():
     )
     spec = fallback_spec(form)
     assert len(spec.positive_anchors) == 1
-    # Anchor should be from RWA/savings-rate category when IRA wrapper
     from app.catalog import load_catalog
     cat = load_catalog()
     anchor_payload = cat[spec.positive_anchors[0]]
-    # If there's any RWA/savings_rate in the catalog, the fallback should pick one
     rwa_or_savings_exists = any(
         p.category.value in ("rwa_treasury", "savings_rate") for p in cat.values()
     )
@@ -71,14 +78,18 @@ def test_fallback_respects_excluded_chains():
 
 
 def test_translate_falls_back_when_client_raises(basic_form):
-    with patch("app.llm._client") as mock_client:
-        mock_client.return_value.models.generate_content.side_effect = RuntimeError("simulated Gemini failure")
+    """Gemini raises -> Groq disabled -> deterministic fallback fires."""
+    with patch("app.llm._gemini_client") as mock_client:
+        mock_client.return_value.models.generate_content.side_effect = RuntimeError(
+            "simulated Gemini failure"
+        )
         spec = translate(basic_form)
         assert isinstance(spec, QuerySpec)
         assert len(spec.positive_anchors) >= 1
 
 
 def test_translate_filters_hallucinated_ids(basic_form):
+    """Gemini returns valid QuerySpec with hallucinated ids -> filtered out."""
     from app.catalog import catalog_ids
 
     valid_id = catalog_ids()[0]
@@ -89,7 +100,7 @@ def test_translate_filters_hallucinated_ids(basic_form):
     mock_response = MagicMock()
     mock_response.parsed = fake_spec
 
-    with patch("app.llm._client") as mock_client:
+    with patch("app.llm._gemini_client") as mock_client:
         mock_client.return_value.models.generate_content.return_value = mock_response
         spec = translate(basic_form)
         assert "fake_protocol_xyz" not in spec.positive_anchors
@@ -98,9 +109,11 @@ def test_translate_filters_hallucinated_ids(basic_form):
 
 
 def test_translate_falls_back_when_no_parsed_object(basic_form):
+    """Gemini parsed=None and text='' -> drops to Groq (disabled) -> deterministic."""
     mock_response = MagicMock()
     mock_response.parsed = None
-    with patch("app.llm._client") as mock_client:
+    mock_response.text = ""  # explicit: no JSON fallback to parse
+    with patch("app.llm._gemini_client") as mock_client:
         mock_client.return_value.models.generate_content.return_value = mock_response
         spec = translate(basic_form)
         assert isinstance(spec, QuerySpec)
@@ -116,7 +129,7 @@ def test_translate_merges_form_min_audit_as_floor(basic_form):
     )
     mock_response = MagicMock()
     mock_response.parsed = weak_spec
-    with patch("app.llm._client") as mock_client:
+    with patch("app.llm._gemini_client") as mock_client:
         mock_client.return_value.models.generate_content.return_value = mock_response
         spec = translate(basic_form)
         assert spec.hard_filters.min_audit_count == 4

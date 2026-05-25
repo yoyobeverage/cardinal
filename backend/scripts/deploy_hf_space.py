@@ -32,6 +32,11 @@ SECRETS = {
     "QDRANT_API_KEY": os.environ["QDRANT_API_KEY"],
     "GOOGLE_API_KEY": os.environ["GOOGLE_API_KEY"],
 }
+# Optional secondary LLM provider (Groq + Llama). If GROQ_API_KEY is missing
+# from the local .env, the Space just won't have it - the layered chain in
+# app.llm gracefully skips that layer when the client returns None.
+if os.environ.get("GROQ_API_KEY"):
+    SECRETS["GROQ_API_KEY"] = os.environ["GROQ_API_KEY"]
 
 SPACE_README = """\
 ---

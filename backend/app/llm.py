@@ -1,20 +1,33 @@
-"""Translator + narrator for Cardinal. Wraps google-genai 2.x.
+"""Translator + narrator for Cardinal. Layered multi-provider LLM chain.
+
+Each task (translate or narrate) tries a chain of providers in order:
+
+    1. Google Gemini 2.5 Flash  (primary, free tier)
+    2. Groq + Llama 3.3 70B     (secondary, free tier, different infra)
+    3. Groq + Llama 3.1 8B      (tertiary, smaller/faster, last LLM try)
+    4. Deterministic template   (final fallback, no LLM, intentionally mechanical)
+
+Each layer has a hard 10s timeout. Failures (network errors, malformed
+output, rate limits) drop the request to the next layer. The deterministic
+template is now essentially unreachable in normal operation - it only fires
+if Google AND Groq are both down simultaneously, which independent
+infrastructure makes vanishingly unlikely.
 
 Surfaces:
-- translate(form): Single Gemini call with response_schema=QuerySpec. On any failure
-  (network error, validation error, hallucinated ids), returns fallback_spec(form).
-  Merges form-level hard filters in as a floor (stricter constraint wins).
-- fallback_spec(form): Deterministic QuerySpec from form fields only. Picks a sensible
-  anchor protocol based on tax wrapper + audit/TVL/lockup filters.
-- narrate(allocation): Day 4 ships a deterministic markdown summary. Day 7 swaps in
-  a Gemini-narrated explanation card.
+- translate(form):  freeform string + form  ->  validated QuerySpec
+- narrate(allocation):  Allocation  ->  ~150-word markdown
+- fallback_spec(form):  deterministic last-resort QuerySpec (still exported
+  for direct use and tests)
 """
 from __future__ import annotations
 
+import json
 import logging
 from functools import lru_cache
+from typing import Any
 
 from google import genai
+from groq import Groq
 
 from app.catalog import catalog_ids, catalog_summary_for_prompt, load_catalog
 from app.config import settings
@@ -30,13 +43,26 @@ from app.schemas import (
 log = logging.getLogger(__name__)
 
 
+# ----------------------------------------------------------------------------
+# Provider clients (lazy, cached)
+# ----------------------------------------------------------------------------
 @lru_cache(maxsize=1)
-def _client() -> genai.Client:
+def _gemini_client() -> genai.Client:
     return genai.Client(api_key=settings.GOOGLE_API_KEY)
 
 
 @lru_cache(maxsize=1)
-def _system_prompt() -> str:
+def _groq_client() -> Groq | None:
+    if not settings.GROQ_API_KEY:
+        return None
+    return Groq(api_key=settings.GROQ_API_KEY, timeout=settings.LLM_TIMEOUT_S)
+
+
+# ----------------------------------------------------------------------------
+# Translator
+# ----------------------------------------------------------------------------
+@lru_cache(maxsize=1)
+def _translator_system_prompt() -> str:
     return f"""You are a parser. Read a user's freeform statement about their crypto yield investment preferences and combine it with their structured form values into a JSON object matching the QuerySpec schema. Do not add commentary. Do not recommend protocols beyond the catalog ids listed below.
 
 Catalog of available protocols (use ONLY these ids in positive_anchors and negative_anchors):
@@ -52,7 +78,7 @@ Field guidance:
 Never invent protocol ids. If a user's request doesn't match any catalog id, leave positive_anchors empty rather than guessing."""
 
 
-def _user_message(form: FormInput) -> str:
+def _translator_user_message(form: FormInput) -> str:
     return f"""Structured form values:
 - capital_usd: {form.capital_usd}
 - horizon_months: {form.horizon_months}
@@ -66,6 +92,63 @@ Freeform statement:
 \"\"\"{form.freeform}\"\"\"
 
 Return only valid JSON matching the QuerySpec schema."""
+
+
+def _qs_from_json_dict(raw: dict[str, Any]) -> QuerySpec:
+    """Build a QuerySpec from a raw dict that may have missing/extra fields."""
+    return QuerySpec.model_validate(raw)
+
+
+def _gemini_translate(form: FormInput) -> QuerySpec | None:
+    """Try Gemini structured-output. None on any failure."""
+    try:
+        response = _gemini_client().models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=_translator_user_message(form),
+            config={
+                "system_instruction": _translator_system_prompt(),
+                "response_mime_type": "application/json",
+                "response_schema": QuerySpec,
+            },
+        )
+        spec = response.parsed
+        if isinstance(spec, QuerySpec):
+            return spec
+        # Sometimes response.parsed is None but response.text contains valid JSON
+        text = (response.text or "").strip()
+        if text:
+            return _qs_from_json_dict(json.loads(text))
+        log.warning("gemini translate: empty response")
+        return None
+    except Exception as e:
+        log.warning("gemini translate failed: %s: %s", type(e).__name__, e)
+        return None
+
+
+def _groq_translate(form: FormInput, model: str) -> QuerySpec | None:
+    """Try Groq with JSON-mode. None on any failure."""
+    client = _groq_client()
+    if client is None:
+        return None
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _translator_system_prompt()},
+                {"role": "user", "content": _translator_user_message(form)},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=1500,
+        )
+        text = (resp.choices[0].message.content or "").strip()
+        if not text:
+            log.warning("groq[%s] translate: empty response", model)
+            return None
+        return _qs_from_json_dict(json.loads(text))
+    except Exception as e:
+        log.warning("groq[%s] translate failed: %s: %s", model, type(e).__name__, e)
+        return None
 
 
 def _merge_form_filters(spec: QuerySpec, form: FormInput) -> QuerySpec:
@@ -86,7 +169,6 @@ def _merge_form_filters(spec: QuerySpec, form: FormInput) -> QuerySpec:
 
 
 def _filter_hallucinations(spec: QuerySpec) -> QuerySpec:
-    """Drop any anchor ids that aren't in the live catalog."""
     valid = set(catalog_ids())
     spec.positive_anchors = [a for a in spec.positive_anchors if a in valid]
     spec.negative_anchors = [n for n in spec.negative_anchors if n in valid]
@@ -94,33 +176,33 @@ def _filter_hallucinations(spec: QuerySpec) -> QuerySpec:
 
 
 def translate(form: FormInput) -> QuerySpec:
-    """Freeform string + form -> QuerySpec. Falls back on any failure."""
-    try:
-        response = _client().models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=_user_message(form),
-            config={
-                "system_instruction": _system_prompt(),
-                "response_mime_type": "application/json",
-                "response_schema": QuerySpec,
-            },
-        )
-        spec = response.parsed
-        if spec is None or not isinstance(spec, QuerySpec):
-            log.warning("Gemini returned no parsed QuerySpec; using fallback_spec")
-            return fallback_spec(form)
+    """Layered provider chain: Gemini -> Groq 70B -> Groq 8B -> deterministic."""
+    chain = [
+        ("gemini-flash", lambda: _gemini_translate(form)),
+        ("groq-llama-70b", lambda: _groq_translate(form, settings.GROQ_MODEL_PRIMARY)),
+        ("groq-llama-8b", lambda: _groq_translate(form, settings.GROQ_MODEL_FAST)),
+    ]
+    for layer_name, attempt in chain:
+        spec = attempt()
+        if spec is None:
+            continue
         spec = _filter_hallucinations(spec)
         spec = _merge_form_filters(spec, form)
         if not spec.positive_anchors:
-            # No usable anchors after hallucination filter - fall back to deterministic anchor
+            # Even a valid response with zero usable anchors is a partial fail.
+            # Backfill from deterministic to keep going.
             fb = fallback_spec(form)
             spec.positive_anchors = fb.positive_anchors
+        log.info("translate served by %s", layer_name)
         return spec
-    except Exception:
-        log.exception("translator failed; using fallback_spec")
-        return fallback_spec(form)
+
+    log.error("translate: all LLM providers failed; serving deterministic fallback_spec")
+    return fallback_spec(form)
 
 
+# ----------------------------------------------------------------------------
+# Deterministic last-resort spec (still exported for tests + final fallback)
+# ----------------------------------------------------------------------------
 def fallback_spec(form: FormInput) -> QuerySpec:
     """Deterministic spec from form fields only. Always produces a non-empty positive_anchors."""
     cat = load_catalog()
@@ -138,7 +220,7 @@ def fallback_spec(form: FormInput) -> QuerySpec:
         valid.append((pid, p))
 
     if not valid:
-        valid = list(cat.items())  # filters too strict - soften
+        valid = list(cat.items())
 
     ira_categories = {"rwa_treasury", "savings_rate"}
     if form.tax_wrapper in (TaxWrapper.TRADITIONAL_IRA, TaxWrapper.ROTH_IRA):
@@ -163,6 +245,9 @@ def fallback_spec(form: FormInput) -> QuerySpec:
     )
 
 
+# ----------------------------------------------------------------------------
+# Narrator
+# ----------------------------------------------------------------------------
 _NARRATOR_SYSTEM_PROMPT = """You are a financial assistant. You will receive a portfolio of crypto yield products that was already selected by a quantitative vector-search system; you are NOT making the selection, just explaining it.
 
 Write a roughly 150-word markdown explanation of why this portfolio fits the user's stated concerns. Use these rules:
@@ -173,6 +258,60 @@ Write a roughly 150-word markdown explanation of why this portfolio fits the use
 - Do not recommend changes. Do not invent risks or properties not in the data.
 - Use plain markdown (bold/italic ok). Never use headers (#).
 - Be concrete, not generic. Reference actual protocol names and APYs."""
+
+
+def _narrator_user_message(allocation: Allocation) -> str:
+    position_lines = []
+    for pos in allocation.positions:
+        position_lines.append(
+            f"- {pos.payload.protocol} ({pos.payload.product}, {pos.payload.category.value}): "
+            f"{pos.weight * 100:.1f}% allocation (${pos.dollars:,.0f}), "
+            f"{pos.payload.current_apy:.2f}% APY, "
+            f"max drawdown {pos.payload.max_drawdown_1y:.1%}, "
+            f"{pos.payload.audit_count} audits, {pos.payload.lockup_days}d lockup"
+        )
+    concerns_str = "; ".join(allocation.extracted_concerns) or "(none specifically stated)"
+    return (
+        "Portfolio positions (already selected by the quantitative system):\n"
+        + "\n".join(position_lines)
+        + f"\n\nUser's concerns: {concerns_str}\n\n"
+        "Write the ~150-word markdown explanation now."
+    )
+
+
+def _gemini_narrate(allocation: Allocation) -> str | None:
+    try:
+        response = _gemini_client().models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=_narrator_user_message(allocation),
+            config={"system_instruction": _NARRATOR_SYSTEM_PROMPT},
+        )
+        text = (response.text or "").strip()
+        return text or None
+    except Exception as e:
+        log.warning("gemini narrate failed: %s: %s", type(e).__name__, e)
+        return None
+
+
+def _groq_narrate(allocation: Allocation, model: str) -> str | None:
+    client = _groq_client()
+    if client is None:
+        return None
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _NARRATOR_SYSTEM_PROMPT},
+                {"role": "user", "content": _narrator_user_message(allocation)},
+            ],
+            temperature=0.6,
+            max_tokens=400,
+        )
+        text = (resp.choices[0].message.content or "").strip()
+        return text or None
+    except Exception as e:
+        log.warning("groq[%s] narrate failed: %s: %s", model, type(e).__name__, e)
+        return None
 
 
 def _fallback_narration(allocation: Allocation) -> str:
@@ -190,39 +329,20 @@ def _fallback_narration(allocation: Allocation) -> str:
 
 
 def narrate(allocation: Allocation) -> str:
-    """Single Gemini call producing a ~150-word markdown explanation card."""
+    """Layered provider chain: Gemini -> Groq 70B -> Groq 8B -> deterministic."""
     if not allocation.positions:
         return "No allocation could be produced from your input."
-    try:
-        position_lines = []
-        for pos in allocation.positions:
-            position_lines.append(
-                f"- {pos.payload.protocol} ({pos.payload.product}, {pos.payload.category.value}): "
-                f"{pos.weight * 100:.1f}% allocation (${pos.dollars:,.0f}), "
-                f"{pos.payload.current_apy:.2f}% APY, "
-                f"max drawdown {pos.payload.max_drawdown_1y:.1%}, "
-                f"{pos.payload.audit_count} audits, {pos.payload.lockup_days}d lockup"
-            )
-        concerns_str = "; ".join(allocation.extracted_concerns) or "(none specifically stated)"
 
-        user_message = (
-            "Portfolio positions (already selected by the quantitative system):\n"
-            + "\n".join(position_lines)
-            + f"\n\nUser's concerns: {concerns_str}\n\n"
-            "Write the ~150-word markdown explanation now."
-        )
+    chain = [
+        ("gemini-flash", lambda: _gemini_narrate(allocation)),
+        ("groq-llama-70b", lambda: _groq_narrate(allocation, settings.GROQ_MODEL_PRIMARY)),
+        ("groq-llama-8b", lambda: _groq_narrate(allocation, settings.GROQ_MODEL_FAST)),
+    ]
+    for layer_name, attempt in chain:
+        text = attempt()
+        if text:
+            log.info("narrate served by %s", layer_name)
+            return text
 
-        response = _client().models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=user_message,
-            config={
-                "system_instruction": _NARRATOR_SYSTEM_PROMPT,
-            },
-        )
-        text = (response.text or "").strip()
-        if not text:
-            return _fallback_narration(allocation)
-        return text
-    except Exception:
-        log.exception("narrator failed; using deterministic fallback")
-        return _fallback_narration(allocation)
+    log.error("narrate: all LLM providers failed; serving deterministic fallback")
+    return _fallback_narration(allocation)
