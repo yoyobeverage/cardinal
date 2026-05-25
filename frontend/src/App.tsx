@@ -9,6 +9,9 @@ import FormMercury from "./views/demo/FormMercury";
 import FormDeFiNative from "./views/demo/FormDeFiNative";
 import FormSwiss from "./views/demo/FormSwiss";
 import FormMagazine from "./views/demo/FormMagazine";
+import FormSwissDark from "./views/demo/FormSwissDark";
+import FormDeFiLight from "./views/demo/FormDeFiLight";
+import FormHybrid from "./views/demo/FormHybrid";
 import type { Allocation } from "./types";
 
 // Minimal path-based routing. Avoids react-router for a 5-route SPA.
@@ -35,6 +38,9 @@ export default function App() {
   if (path === "/demo/defi") return <FormDeFiNative />;
   if (path === "/demo/swiss") return <FormSwiss />;
   if (path === "/demo/magazine") return <FormMagazine />;
+  if (path === "/demo/swiss-dark") return <FormSwissDark />;
+  if (path === "/demo/defi-light") return <FormDeFiLight />;
+  if (path === "/demo/hybrid") return <FormHybrid />;
 
   // Default app shell - existing production form.
   return (
