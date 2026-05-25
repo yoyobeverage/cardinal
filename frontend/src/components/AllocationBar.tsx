@@ -1,3 +1,9 @@
+// Headline visualization for an Allocation: a horizontal stacked bar where
+// each segment's width equals the position's weight, followed by a breakdown
+// table (protocol, product, weight%, dollars, APY) with a weighted-APY footer.
+// Clicking any segment or row fires onPositionClick, used by ResultsView to
+// open the drilldown drawer.
+
 import { BORDER, INK, INK_2, INK_3, MONO, SURFACE_2 } from "../theme";
 import type { Position } from "../types";
 

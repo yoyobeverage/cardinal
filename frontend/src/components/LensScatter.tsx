@@ -1,3 +1,10 @@
+// The lens-swap money shot. SVG scatter of all 83 catalog protocols using a
+// 2D UMAP projection of whichever named-vector lens is active. Each lens has
+// its own pre-computed coords (served from /api/universe), so toggling the
+// lens animates every dot to its new position via a CSS `transition: transform`
+// on the wrapping <g>. Allocated dots are outlined and larger; non-allocated
+// dots are clickable for exploration drilldown.
+
 import { useEffect, useMemo, useState } from "react";
 
 import {

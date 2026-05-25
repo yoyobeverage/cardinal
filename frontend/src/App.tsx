@@ -1,3 +1,10 @@
+// Root component. Two responsibilities:
+//   1. Minimal path-based SPA router (no react-router for ~12 routes).
+//      Vercel rewrites every path to /index.html, so window.location.pathname
+//      is the source of truth.
+//   2. Production layout: FormView and ResultsView stay co-mounted so the
+//      react-hook-form state inside FormView survives the submit -> back round-trip.
+
 import { useEffect, useState } from "react";
 
 import FormView from "./views/FormView";

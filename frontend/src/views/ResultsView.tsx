@@ -1,3 +1,14 @@
+// Production results page. Three sections stacked vertically:
+//   1. SummaryStats strip (weighted APY, expected 1y drawdown, mean audit
+//      count, effective positions) + AllocationBar (stacked-bar + table)
+//   2. Universe map card: LensSelector + LensScatter showing all 83 protocols
+//      projected onto whichever named-vector lens is active; allocated dots
+//      stay highlighted as the user cycles lenses
+//   3. Concerns chips (from query_spec.extracted_concerns) + ExplanationCard
+//      (the narrator's markdown prose)
+// Clicking any allocated dot OR table row OR scatter dot opens DrilldownDrawer
+// in the right mode (allocation vs exploration).
+
 import { useMemo, useState } from "react";
 
 import { fetchProtocol } from "../api";

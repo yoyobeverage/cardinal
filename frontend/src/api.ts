@@ -1,3 +1,7 @@
+// Typed fetch wrappers for the Cardinal backend. One function per endpoint.
+// VITE_API_BASE is set at build time from .env.production (HF Space URL) or
+// at dev time from .env.local; falls back to localhost:8000 for plain `npm run dev`.
+
 import type { Allocation, FormInput, PointPayload } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://127.0.0.1:8000";

@@ -1,3 +1,15 @@
+// Production form. Posts a FormInput to POST /api/portfolio and lifts the
+// returned Allocation back up to App via onAllocation. Structure:
+//   - Top nav + hero ("Qdrant indexes every yield product six different ways")
+//   - Lens-index card with per-row hover tooltips explaining each lens
+//   - Persona quick-start buttons (House-buyer / Retiree / Degen)
+//   - Capital, Horizon (real slider), Account type, Safety filters cards
+//   - Optional 'Personalize' card: YieldSourceRank + DrawdownSwipe + optimizer
+//   - Freeform textarea + submit CTA panel
+// State held by react-hook-form internally; optional shapers (swipes, yield
+// ranking, optimizer choice) are useState. App keeps this component mounted
+// even after submit so state survives the back-to-form round trip.
+
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 

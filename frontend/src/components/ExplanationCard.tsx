@@ -1,3 +1,8 @@
+// Renders the markdown explanation produced by the narrator (Gemini or Groq
+// via the layered chain in app.llm:narrate). Custom theme overrides on
+// markdown elements so the prose matches the rest of the DeFi-light palette
+// (mint links/emphasis, navy strong, body in INK_2).
+
 import ReactMarkdown from "react-markdown";
 
 import { INK, INK_2, MINT } from "../theme";

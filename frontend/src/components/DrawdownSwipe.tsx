@@ -1,3 +1,9 @@
+// Optional onboarding panel showing 5 real historical crypto blowups (Terra,
+// FTX, USDC depeg, stETH discount, BTC 70% drawdown). Each card has a 'I held'
+// / 'I sold' choice. Answers feed Qdrant's Discovery API as held->sold context
+// pairs that steer the search toward protocols matching the user's revealed
+// risk tolerance. Collapsed by default so this stays an opt-in shaper.
+
 import { lazy, Suspense, useState } from "react";
 
 import type { DrawdownSwipe } from "../types";

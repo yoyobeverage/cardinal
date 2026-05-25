@@ -1,3 +1,11 @@
+// Right-side slide-in drawer that opens on any allocation-bar segment click
+// or any scatter dot click. Two modes:
+//   - allocation: dot was in the user's portfolio. Shows weight + dollars
+//     row, full payload, 6-spoke radar of per-lens similarity to anchors.
+//   - exploration: dot was a non-allocated catalog protocol fetched via
+//     /api/protocol/{id}. Shows 'Not in your allocation' badge so the user
+//     understands they're inspecting, not investing.
+
 import { lazy, Suspense, useEffect } from "react";
 
 import {

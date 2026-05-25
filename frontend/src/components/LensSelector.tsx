@@ -1,3 +1,8 @@
+// Segmented button group for switching between the 6 named-vector lenses
+// (Narrative, Risk, Yield Source, Correlation, Tax, Composability). Active
+// state shows mint background with white text; inactive shows muted ink.
+// State lives in ResultsView; this component is purely presentational.
+
 import { BORDER, INK_2, MINT, SURFACE, SURFACE_2 } from "../theme";
 
 interface Props {
