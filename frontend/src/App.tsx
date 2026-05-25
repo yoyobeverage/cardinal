@@ -1,12 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import FormView from "./views/FormView";
 import ResultsView from "./views/ResultsView";
+import DemoIndex from "./views/demo/DemoIndex";
+import FormFTEditorial from "./views/demo/FormFTEditorial";
+import FormTerminal from "./views/demo/FormTerminal";
+import FormMercury from "./views/demo/FormMercury";
 import type { Allocation } from "./types";
+
+// Minimal path-based routing. Avoids react-router for a 5-route SPA.
+// Vercel rewrites every path to /index.html, so the browser's pathname is the source of truth.
+function usePath(): string {
+  const [path, setPath] = useState(() => window.location.pathname);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return path;
+}
 
 export default function App() {
   const [allocation, setAllocation] = useState<Allocation | null>(null);
+  const path = usePath();
 
+  // Demo routes render bare (no Cardinal chrome) so each variant defines its own.
+  if (path === "/demo") return <DemoIndex />;
+  if (path === "/demo/ft") return <FormFTEditorial />;
+  if (path === "/demo/terminal") return <FormTerminal />;
+  if (path === "/demo/mercury") return <FormMercury />;
+
+  // Default app shell - existing production form.
   return (
     <div className="min-h-screen overflow-x-hidden bg-zinc-950 text-zinc-100">
       <header className="border-b border-zinc-800 px-6 py-4">
