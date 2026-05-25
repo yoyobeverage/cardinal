@@ -173,7 +173,7 @@ export default function FormView({ onAllocation }: Props) {
   const [swipes, setSwipes] = useState<DrawdownSwipe[]>([]);
   const [yieldRanking, setYieldRanking] = useState<YieldSource[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const { register, handleSubmit, reset, watch } = useForm<FormDraft>({
+  const { register, handleSubmit, reset, watch, setValue } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
       horizon_months: 12,
@@ -265,21 +265,24 @@ export default function FormView({ onAllocation }: Props) {
                 className="mt-4 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl"
                 style={{ color: INK, letterSpacing: "-0.03em" }}
               >
-                Yield discovery,{" "}
-                <span style={{ color: MINT }}>
-                  without the
-                  <br />
-                  hallucinations
-                </span>
-                .
+                Qdrant indexes every yield product{" "}
+                <span style={{ color: MINT }}>six different ways</span>.
               </h1>
               <p
                 className="mt-5 max-w-xl text-base leading-relaxed"
                 style={{ color: INK_2 }}
               >
-                Six named-vector indexes over a curated 83-product catalog (DeFi lending,
-                liquid-staking, RWA T-bills). The LLM only translates your input and
-                narrates the result. Every selection is vector math.
+                Each of our 83 yield products — DeFi lending, liquid staking, tokenized
+                Treasury bills, and more — lives in Qdrant as six separate vectors:{" "}
+                <span style={{ color: INK }}>narrative</span>,{" "}
+                <span style={{ color: INK }}>risk</span>,{" "}
+                <span style={{ color: INK }}>yield-source</span>,{" "}
+                <span style={{ color: INK }}>correlation</span>,{" "}
+                <span style={{ color: INK }}>tax</span>, and{" "}
+                <span style={{ color: INK }}>composability</span>. Cardinal queries all six
+                in a single round-trip and assembles the eight protocols that fit your
+                situation. The LLM only translates your input and narrates the result —
+                every selection decision is vector math.
               </p>
             </div>
 
@@ -401,20 +404,30 @@ export default function FormView({ onAllocation }: Props) {
                 />
                 <span className="text-sm" style={{ color: INK_3 }}>months</span>
               </div>
-              <div
-                className="mt-3 h-2 overflow-hidden rounded-full"
-                style={{ background: BORDER }}
-              >
-                <div
-                  className="h-full transition-all"
-                  style={{
-                    width: `${(Number(horizon || 12) / 60) * 100}%`,
-                    background: `linear-gradient(90deg, ${MINT}, ${MINT_BRIGHT})`,
-                  }}
-                />
-              </div>
+              {/* Real draggable slider, synced to the same form field via setValue.
+                  The gradient background visualizes the fill (mint left of thumb,
+                  border-gray right of it). */}
+              <input
+                type="range"
+                min={1}
+                max={60}
+                value={Number(horizon || 12)}
+                onChange={(e) =>
+                  setValue("horizon_months", Number(e.target.value), {
+                    shouldValidate: true,
+                  })
+                }
+                className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full"
+                style={{
+                  accentColor: MINT,
+                  background: `linear-gradient(90deg, ${MINT_BRIGHT} 0%, ${MINT} ${
+                    (Number(horizon || 12) / 60) * 100
+                  }%, ${BORDER} ${(Number(horizon || 12) / 60) * 100}%)`,
+                }}
+              />
               <div className="mt-2 flex justify-between text-xs" style={{ color: INK_3 }}>
                 <span>1mo</span>
+                <span>30mo</span>
                 <span>60mo</span>
               </div>
             </Card>
