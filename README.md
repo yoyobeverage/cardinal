@@ -2,6 +2,7 @@
 
 **A vector-native yield-discovery system for crypto investors.** Built for the [Qdrant Hackathon 2026](https://try.qdrant.tech/hackathon-vsd).
 
+- **▶ Demo video (3 min):** https://www.loom.com/share/a08fb75e85da402db17a02e13dbf16b5
 - **Live app:** https://cardinal-qdrant.vercel.app
 - **Backend API:** https://nichzhu-cardinal.hf.space (try `/health` and `/api/universe`)
 
@@ -183,7 +184,7 @@ The point is to make the multi-vector index legible. There's only one portfolio,
 
 ## Demo video
 
-Demo video link will appear here once recorded.
+**▶ [Watch the 3-minute demo](https://www.loom.com/share/a08fb75e85da402db17a02e13dbf16b5)**
 
 ## Roadmap (post-hackathon)
 
