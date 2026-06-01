@@ -8,6 +8,8 @@
 
 Cardinal lets a user describe their preferences once - through a structured form, three optional drawdown-scenario swipes, and one freeform sentence - and returns a diversified yield portfolio drawn from a 83-protocol catalog. The interesting part is what Cardinal **does not** do.
 
+![Cardinal's input form: a plain-English hero, the six named-vector lens index, and one-click persona presets](docs/screenshots/01-form.png)
+
 ## The thesis: keep the LLM out of the selection
 
 Most "AI yield advisors" sit an LLM in the decision seat. Form goes in, LLM reads the catalog, LLM emits a portfolio. This fails in three ways:
@@ -63,6 +65,10 @@ Each catalog point carries 6 populated vectors:
 | `tax_treatment` | 12 | cosine | One-hot of ordinary_income / qualified_dividend / capital_gain / return_of_capital / qbi / uncertain |
 | `composability` | 64 | dot | node2vec embedding over a hand-curated receipt-token graph (which protocols accept which other protocols' receipt tokens as collateral/inputs) |
 
+The drilldown drawer makes all six lenses legible at once: a single protocol's similarity to your anchor set on every axis, plotted as one radar.
+
+![Drilldown drawer for one protocol: full payload table plus a six-spoke radar of per-lens similarity to the user's anchors](docs/screenshots/04-drilldown.png)
+
 → See [`backend/scripts/build_vectors.py`](backend/scripts/build_vectors.py) and [`backend/app/qdrant_client.py:VECTOR_CONFIGS`](backend/app/qdrant_client.py)
 
 ### 2. Recommend API with positive + negative anchors
@@ -91,12 +97,16 @@ The optional drawdown-swipe onboarding presents 5 historical events (Terra/Luna 
 
 ## Two optimizers
 
-Both operate on the same Qdrant candidate set; the frontend has a toggle so the demo can compare them side by side.
+The results page leads with portfolio-level numbers - weighted APY, expected one-year drawdown, mean audit count, and an effective-position count (inverse Herfindahl) - above the per-position breakdown.
+
+![Results page: weighted APY, expected drawdown, audit count, and diversification stats above a stacked allocation bar and a per-protocol table](docs/screenshots/02-allocation.png)
+
+Both optimizers operate on the same Qdrant candidate set; the frontend has a toggle so the demo can compare them side by side.
 
 - **Weighted-sum** (default) - `score × 1/(1 + max_drawdown_1y) × tax_multiplier`, cap each position at 25%, redistribute excess uniformly across non-capped positions. Risk-tilted, asset-location-aware (boosts ordinary-income yields inside IRA/HSA wrappers; boosts qualified-dividend/cap-gain/QBI products in taxable accounts; penalizes ordinary-income in taxable). Respects the qualitative preferences encoded in the candidate ranking.
 - **Mean-variance (Markowitz)** - scipy SLSQP solves `min wᵀΣw  s.t.  wᵀr ≥ floor,  sum(w) = 1,  0 ≤ wᵢ ≤ cap`. Σ approximated by the pairwise cosine-similarity matrix of correlation vectors, since we don't have real historical return series at hackathon scope. Pure variance minimization; can produce surprising diversifications. Not tax-aware (tax-aware Markowitz is a research area).
 
-For the Anchor-trauma persona: weighted-sum returns 5 RWA T-bills at ~17% each (4.14% portfolio APY); mean-variance returns 1 lending position at the 25% cap + 7 LSTs/LRTs equal-weighted at 10.7% (2.26% APY, exactly the return floor). Same candidate set, fundamentally different baskets.
+For the House-buyer persona (conservative, needs liquidity by month 10): weighted-sum returns a basket of RWA T-bills and savings-rate stablecoins at ~4% portfolio APY with sub-1% expected drawdown; mean-variance, given the same candidates, redistributes toward the lowest-covariance subset and lands exactly on its return floor. Same candidate set, fundamentally different baskets.
 
 → `backend/app/optimizer.py`
 
@@ -180,7 +190,9 @@ Three persona buttons pre-fill the form so the demo can show different shaping b
 
 The most visually distinctive moment in the demo is the lens selector on the results page. Same 83 protocols, same allocation highlighted, but as you click between **Narrative → Risk → Yield Source → Correlation → Tax → Composability**, every dot animates to its new 2D UMAP projection in 600 ms. LSTs cluster tightly under Narrative, then spread out under Risk, then cluster differently again under Yield Source, then re-cluster on Composability (because they all feed into the same set of downstream protocols). The drilldown radar shows a per-lens similarity profile for any allocated protocol - now with all 6 spokes.
 
-The point is to make the multi-vector index legible. There's only one portfolio, but it lives in four different similarity spaces simultaneously, and Qdrant's named-vector design is what makes that visible.
+![Universe map: all 83 protocols as a 2D UMAP scatter under the active lens, with the 8 allocated protocols outlined and a category legend](docs/screenshots/03-lens-scatter.png)
+
+The point is to make the multi-vector index legible. There's only one portfolio, but it lives in six different similarity spaces simultaneously, and Qdrant's named-vector design is what makes that visible.
 
 ## Demo video
 
