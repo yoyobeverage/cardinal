@@ -108,10 +108,6 @@ def build_filter(hf: HardFilters) -> qm.Filter | None:
         must.append(qm.FieldCondition(
             key="tvl_usd", range=qm.Range(gte=float(hf.min_tvl_usd))
         ))
-    if hf.min_apy is not None and hf.min_apy > 0:
-        must.append(qm.FieldCondition(
-            key="current_apy", range=qm.Range(gte=float(hf.min_apy))
-        ))
     if hf.max_lockup_days is not None:
         must.append(qm.FieldCondition(
             key="lockup_days", range=qm.Range(lte=hf.max_lockup_days)

@@ -99,7 +99,7 @@ app.add_middleware(
 )
 
 
-def _run_query(spec: QuerySpec) -> list:
+def _run_query(spec: QuerySpec, limit: int = 20) -> list:
     primary_lens = "risk" if spec.lens_weights.risk > spec.lens_weights.narrative else "narrative"
     if spec.positive_anchors:
         return qdrant_client.recommend(
@@ -107,14 +107,14 @@ def _run_query(spec: QuerySpec) -> list:
             negative=spec.negative_anchors,
             using=primary_lens,
             hard_filters=spec.hard_filters,
-            limit=20,
+            limit=limit,
         )
     # No anchors - scroll-style enumeration on the primary lens (no scoring against anchor).
     client = qdrant_client.get_client()
     pts, _ = client.scroll(
         collection_name=qdrant_client.COLLECTION,
         scroll_filter=qdrant_client.build_filter(spec.hard_filters),
-        limit=20,
+        limit=limit,
         with_payload=True,
     )
     for p in pts:
@@ -239,8 +239,12 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
             except Exception:
                 log.exception("discovery_walk failed; continuing without swipe anchors")
 
-    # Remember any requested APY floor so we can relax it below if it over-constrains.
-    requested_min_apy = spec.hard_filters.min_apy
+    # Resolve the blended-APY target: the form's explicit slider wins; otherwise
+    # use whatever the translator extracted from the freeform ("give me 7%").
+    target_apy = form.target_apy if form.target_apy else spec.target_apy
+    # With a target we need APY spread in the candidate pool to blend onto the
+    # number, so pull a wider set. The target-yield LP picks the basket from it.
+    candidate_limit = 40 if target_apy else 20
 
     # If the user drag-ranked yield sources, route through multi_vector_prefetch
     # with a yield_source target instead of the anchor-based recommend.
@@ -254,32 +258,34 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
                 target_vectors={"yield_source": target},
                 weights=LensWeights(yield_source=1.0),
                 hard_filters=spec.hard_filters,
-                limit=20,
+                limit=candidate_limit,
             )
         except Exception:
             log.exception("multi_vector_prefetch failed; falling back to _run_query")
-            candidates = _run_query(spec)
+            candidates = _run_query(spec, limit=candidate_limit)
     else:
-        candidates = _run_query(spec)
+        candidates = _run_query(spec, limit=candidate_limit)
     log.info("qdrant: %d candidates", len(candidates))
 
-    # An APY floor can over-constrain (e.g. "7% yield" + "conservative" + "min 3
-    # audits" may leave <5 protocols). A 2-position basket is worse UX than a met
-    # floor, so if too few candidates survive, drop the floor, re-query, and surface
-    # the tension as a concern the narrator + UI can show.
-    MIN_VIABLE_CANDIDATES = 5
-    if requested_min_apy and len(candidates) < MIN_VIABLE_CANDIDATES:
-        log.info("min_apy=%.1f left only %d candidates; relaxing the floor",
-                 requested_min_apy, len(candidates))
-        spec.hard_filters.min_apy = None
-        candidates = _run_query(spec)
-        spec.extracted_concerns.append(
-            f"could not fully meet the {requested_min_apy:.0f}% yield floor "
-            "within your other constraints"
+    # An explicit yield target overrides the optimizer toggle: hitting an exact
+    # blended APY needs the constrained target_yield LP. It still maximizes
+    # preference-match (anchors x risk-fit x tax-fit), so the basket reflects all
+    # the user's other context - it just lands ON the target instead of wherever
+    # the unconstrained optimizer would drift.
+    if target_apy:
+        positions, clamped_to = optimizer.target_yield(
+            candidates, form.capital_usd, target_apy,
+            tax_wrapper=form.tax_wrapper.value,
         )
-        log.info("after relaxing min_apy: %d candidates", len(candidates))
-
-    if optimizer_name == "mean_variance":
+        if clamped_to is not None:
+            direction = "above" if clamped_to < target_apy else "below"
+            spec.extracted_concerns.append(
+                f"{target_apy:.1f}% yield isn't achievable from the matching "
+                f"protocols; built the closest at {clamped_to:.1f}% "
+                f"({direction} your target)"
+            )
+            log.info("target_yield: %.1f%% clamped to %.1f%%", target_apy, clamped_to)
+    elif optimizer_name == "mean_variance":
         positions = optimizer.mean_variance(
             candidates, _correlation_vectors(), form.capital_usd,
         )

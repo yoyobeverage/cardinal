@@ -56,6 +56,7 @@ export interface FormInput {
   max_lockup_days: number | null;
   yield_source_ranking?: YieldSource[] | null;
   drawdown_swipes?: DrawdownSwipe[] | null;
+  target_apy?: number | null;
   freeform: string;
 }
 

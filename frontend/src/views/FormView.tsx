@@ -185,6 +185,8 @@ export default function FormView({ onAllocation }: Props) {
   const [swipes, setSwipes] = useState<DrawdownSwipe[]>([]);
   const [yieldRanking, setYieldRanking] = useState<YieldSource[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [targetOn, setTargetOn] = useState(false);
+  const [targetApy, setTargetApy] = useState(7);
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormDraft>({
     defaultValues: {
       capital_usd: 100_000,
@@ -219,6 +221,7 @@ export default function FormView({ onAllocation }: Props) {
             : Number(data.max_lockup_days),
         drawdown_swipes: swipes.length > 0 ? swipes : null,
         yield_source_ranking: yieldRanking.length > 0 ? yieldRanking : null,
+        target_apy: targetOn ? targetApy : null,
         freeform: data.freeform,
       };
       const alloc = await fetchPortfolio(payload, optimizer);
@@ -442,6 +445,78 @@ export default function FormView({ onAllocation }: Props) {
                 <span>30mo</span>
                 <span>60mo</span>
               </div>
+            </Card>
+
+            <Card
+              title="Target yield"
+              hint="Optional — pin the blended portfolio APY to an exact number"
+              full
+            >
+              <label className="flex cursor-pointer items-center gap-3">
+                <span
+                  className="relative inline-block h-5 w-9 rounded-full transition"
+                  style={{ background: targetOn ? MINT : BORDER }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={targetOn}
+                    onChange={(e) => setTargetOn(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
+                    style={{ left: targetOn ? "1.125rem" : "0.125rem" }}
+                  />
+                </span>
+                <span className="text-sm font-medium" style={{ color: INK }}>
+                  {targetOn ? "Targeting a specific blended yield" : "Let the optimizer choose the yield"}
+                </span>
+              </label>
+
+              {targetOn ? (
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="text-4xl font-semibold"
+                      style={{ color: INK, fontFamily: MONO, letterSpacing: "-0.02em" }}
+                    >
+                      {targetApy.toFixed(1)}
+                    </span>
+                    <span className="text-lg" style={{ color: INK_3 }}>% APY</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    value={targetApy}
+                    onChange={(e) => setTargetApy(Number(e.target.value))}
+                    className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full"
+                    style={{
+                      accentColor: MINT,
+                      background: `linear-gradient(90deg, ${MINT_BRIGHT} 0%, ${MINT} ${
+                        ((targetApy - 1) / 19) * 100
+                      }%, ${BORDER} ${((targetApy - 1) / 19) * 100}%)`,
+                    }}
+                  />
+                  <div className="mt-2 flex justify-between text-xs" style={{ color: INK_3 }}>
+                    <span>1%</span>
+                    <span>10%</span>
+                    <span>20%</span>
+                  </div>
+                  <p className={helperCls} style={{ color: INK_3, marginTop: 12 }}>
+                    We'll build the basket that best matches everything else you tell us
+                    (account, filters, preferences below) and lands the blended yield exactly
+                    on {targetApy.toFixed(1)}%. If that's higher than the matching protocols can
+                    reach, we'll get as close as possible and say so.
+                  </p>
+                </div>
+              ) : (
+                <p className={helperCls} style={{ color: INK_3, marginTop: 12 }}>
+                  Off — we optimize the yield-vs-risk tradeoff for your profile automatically.
+                  Flip this on to demand a specific number (e.g. "I need exactly 7%").
+                </p>
+              )}
             </Card>
 
             <Card

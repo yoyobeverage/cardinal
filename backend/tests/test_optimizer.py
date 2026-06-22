@@ -1,7 +1,7 @@
-"""Tests for the weighted-sum optimizer."""
+"""Tests for the weighted-sum and target-yield optimizers."""
 from unittest.mock import MagicMock
 
-from app.optimizer import weighted_sum
+from app.optimizer import target_yield, weighted_sum
 from app.schemas import Category, Chain, TaxTreatment
 
 
@@ -131,3 +131,69 @@ def test_tax_wrapper_penalizes_ordinary_income_in_taxable():
     ord_pos = next(p for p in positions if p.protocol_id == "ord")
     cap_pos = next(p for p in positions if p.protocol_id == "cap")
     assert cap_pos.weight > ord_pos.weight
+
+
+# ---------------------------------------------------------------------------
+# target_yield: hit an exact blended APY while maximizing preference-match.
+# ---------------------------------------------------------------------------
+def _spread_candidates():
+    """8 protocols spanning 2%..16% APY so a target in-between is blendable."""
+    return [_mock_candidate(f"p{i}", score=1.0, apy=apy)
+            for i, apy in enumerate([2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0])]
+
+
+def _blended_apy(positions) -> float:
+    return sum(p.weight * p.payload.current_apy for p in positions)
+
+
+def test_target_yield_hits_exact_target():
+    positions, clamped = target_yield(_spread_candidates(), 100_000, target_apy_pct=7.0)
+    assert clamped is None
+    assert abs(_blended_apy(positions) - 7.0) < 0.05
+    assert abs(sum(p.weight for p in positions) - 1.0) < 1e-6
+
+
+def test_target_yield_does_not_overshoot():
+    """The reported bug: asking 7% must not drift to 13%. Equality keeps it at 7."""
+    positions, _ = target_yield(_spread_candidates(), 100_000, target_apy_pct=7.0)
+    assert _blended_apy(positions) <= 7.5
+
+
+def test_target_yield_respects_cap():
+    positions, _ = target_yield(
+        _spread_candidates(), 100_000, target_apy_pct=9.0, max_position_pct=0.25
+    )
+    assert all(p.weight <= 0.25 + 1e-6 for p in positions)
+
+
+def test_target_yield_clamps_when_above_achievable_max():
+    """Cap 0.25 -> 4 names -> max blend = mean(top4 APY) = (16+14+12+10)/4 = 13%.
+    Asking 20% is infeasible; it clamps to ~13% and reports the gap."""
+    positions, clamped = target_yield(
+        _spread_candidates(), 100_000, target_apy_pct=20.0, max_position_pct=0.25
+    )
+    assert clamped is not None
+    assert abs(clamped - 13.0) < 0.5
+    assert _blended_apy(positions) <= 13.5
+
+
+def test_target_yield_prefers_higher_desirability_at_target():
+    """Two ways to hit 6%: the higher-score basket should win. Give a high-score
+    pair that averages 6% and a low-score pair that also averages 6%."""
+    cands = [
+        _mock_candidate("good_lo", score=5.0, apy=4.0),
+        _mock_candidate("good_hi", score=5.0, apy=8.0),   # good pair avg 6%
+        _mock_candidate("bad_lo", score=0.2, apy=5.0),
+        _mock_candidate("bad_hi", score=0.2, apy=7.0),    # bad pair avg 6%
+    ]
+    positions, _ = target_yield(cands, 100_000, target_apy_pct=6.0, max_position_pct=0.5)
+    by_id = {p.protocol_id: p.weight for p in positions}
+    good_weight = by_id.get("good_lo", 0) + by_id.get("good_hi", 0)
+    bad_weight = by_id.get("bad_lo", 0) + by_id.get("bad_hi", 0)
+    assert good_weight > bad_weight
+
+
+def test_target_yield_empty_candidates():
+    positions, clamped = target_yield([], 100_000, target_apy_pct=7.0)
+    assert positions == []
+    assert clamped is None

@@ -119,6 +119,10 @@ class FormInput(BaseModel):
     max_lockup_days: int | None = Field(default=None, ge=0)
     yield_source_ranking: list[YieldSource] | None = None
     drawdown_swipes: list[DrawdownSwipe] | None = None
+    # Explicit blended-APY target (percent) from the form's target-yield slider.
+    # When set, the portfolio is built to hit this exact blended APY while still
+    # honoring every other field. Takes precedence over a freeform-extracted target.
+    target_apy: float | None = Field(default=None, ge=0, le=100)
     freeform: str = ""
 
 
@@ -134,11 +138,6 @@ class HardFilters(BaseModel):
     max_lockup_days: int | None = Field(default=None, ge=0)
     min_audit_count: int | None = Field(default=None, ge=0)
     min_tvl_usd: int | None = Field(default=None, ge=0)
-    # Per-protocol APY floor (percent, e.g. 7.0 for "I require 7% yield"). Every
-    # protocol in the candidate set must yield at least this; since each component
-    # clears the floor, the weighted-average portfolio APY does too. Relaxed by
-    # main.py if it leaves too few candidates to build a sensible basket.
-    min_apy: float | None = Field(default=None, ge=0)
     excluded_chains: list[Chain] = []
     excluded_categories: list[Category] = []
 
@@ -150,6 +149,10 @@ class QuerySpec(BaseModel):
     negative_anchors: list[str] = []
     lens_weights: LensWeights = LensWeights()
     hard_filters: HardFilters = HardFilters()
+    # Blended-APY target (percent) extracted from freeform like "give me 7% yield".
+    # None when the user states no yield target. The form's explicit slider, when
+    # set, overrides this in main.py.
+    target_apy: float | None = Field(default=None, ge=0, le=100)
     extracted_concerns: list[str] = []
 
 
