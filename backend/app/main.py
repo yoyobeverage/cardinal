@@ -278,7 +278,7 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
             tax_wrapper=form.tax_wrapper.value,
         )
         if clamped_to is not None:
-            direction = "above" if clamped_to < target_apy else "below"
+            direction = "below" if clamped_to < target_apy else "above"
             spec.extracted_concerns.append(
                 f"{target_apy:.1f}% yield isn't achievable from the matching "
                 f"protocols; built the closest at {clamped_to:.1f}% "
