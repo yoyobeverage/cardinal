@@ -134,6 +134,11 @@ class HardFilters(BaseModel):
     max_lockup_days: int | None = Field(default=None, ge=0)
     min_audit_count: int | None = Field(default=None, ge=0)
     min_tvl_usd: int | None = Field(default=None, ge=0)
+    # Per-protocol APY floor (percent, e.g. 7.0 for "I require 7% yield"). Every
+    # protocol in the candidate set must yield at least this; since each component
+    # clears the floor, the weighted-average portfolio APY does too. Relaxed by
+    # main.py if it leaves too few candidates to build a sensible basket.
+    min_apy: float | None = Field(default=None, ge=0)
     excluded_chains: list[Chain] = []
     excluded_categories: list[Category] = []
 

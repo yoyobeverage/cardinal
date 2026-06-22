@@ -33,6 +33,7 @@ PAYLOAD_INDEXES: list[tuple[str, qm.PayloadSchemaType]] = [
     ("category",       qm.PayloadSchemaType.KEYWORD),
     ("chains",         qm.PayloadSchemaType.KEYWORD),
     ("tvl_usd",        qm.PayloadSchemaType.FLOAT),
+    ("current_apy",    qm.PayloadSchemaType.FLOAT),
     ("audit_count",    qm.PayloadSchemaType.INTEGER),
     ("lockup_days",    qm.PayloadSchemaType.INTEGER),
     ("launched_at",    qm.PayloadSchemaType.DATETIME),
@@ -106,6 +107,10 @@ def build_filter(hf: HardFilters) -> qm.Filter | None:
     if hf.min_tvl_usd is not None and hf.min_tvl_usd > 0:
         must.append(qm.FieldCondition(
             key="tvl_usd", range=qm.Range(gte=float(hf.min_tvl_usd))
+        ))
+    if hf.min_apy is not None and hf.min_apy > 0:
+        must.append(qm.FieldCondition(
+            key="current_apy", range=qm.Range(gte=float(hf.min_apy))
         ))
     if hf.max_lockup_days is not None:
         must.append(qm.FieldCondition(

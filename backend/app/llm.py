@@ -72,7 +72,7 @@ Field guidance:
 - positive_anchors: 1-3 catalog ids the user is likely to be interested in based on their words. If the user mentions Anchor/Terra/algorithmic-stablecoin trauma -> RWA T-bill anchors (ondo, blackrock, hashnote, openeden). If they mention staking ETH -> LST/LRT anchors (lido, rocket-pool, ether.fi). If they want stable income -> savings_rate or lending anchors.
 - negative_anchors: catalog ids the user explicitly does NOT want. If "no LRTs" -> renzo, kelp, swell. If "no Curve" -> curve-dex pools. Empty list is fine.
 - lens_weights: how much each axis matters (narrative, risk, yield_source, correlation, composability). Default narrative=0.5, risk=0.5. Boost risk when user emphasizes safety. Sum doesn't need to be exactly 1.0.
-- hard_filters: ONLY set what the user explicitly states. "I need liquidity by month 10" -> max_lockup_days=270 (months*30). "min 3 audits" -> min_audit_count=3. "no Solana" -> excluded_chains=["solana"]. Leave fields null/empty otherwise.
+- hard_filters: ONLY set what the user explicitly states. "I need liquidity by month 10" -> max_lockup_days=270 (months*30). "min 3 audits" -> min_audit_count=3. "no Solana" -> excluded_chains=["solana"]. "I require 7% yield" / "need at least 7% APY" / "want 7%+ returns" -> min_apy=7.0 (bare number, "7%" -> 7.0). Leave fields null/empty otherwise.
 - extracted_concerns: 1-4 short strings that paraphrase the user's qualitative concerns. These will be surfaced in the explanation card.
 
 Never invent protocol ids. If a user's request doesn't match any catalog id, leave positive_anchors empty rather than guessing."""

@@ -239,6 +239,9 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
             except Exception:
                 log.exception("discovery_walk failed; continuing without swipe anchors")
 
+    # Remember any requested APY floor so we can relax it below if it over-constrains.
+    requested_min_apy = spec.hard_filters.min_apy
+
     # If the user drag-ranked yield sources, route through multi_vector_prefetch
     # with a yield_source target instead of the anchor-based recommend.
     if form.yield_source_ranking:
@@ -259,6 +262,22 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
     else:
         candidates = _run_query(spec)
     log.info("qdrant: %d candidates", len(candidates))
+
+    # An APY floor can over-constrain (e.g. "7% yield" + "conservative" + "min 3
+    # audits" may leave <5 protocols). A 2-position basket is worse UX than a met
+    # floor, so if too few candidates survive, drop the floor, re-query, and surface
+    # the tension as a concern the narrator + UI can show.
+    MIN_VIABLE_CANDIDATES = 5
+    if requested_min_apy and len(candidates) < MIN_VIABLE_CANDIDATES:
+        log.info("min_apy=%.1f left only %d candidates; relaxing the floor",
+                 requested_min_apy, len(candidates))
+        spec.hard_filters.min_apy = None
+        candidates = _run_query(spec)
+        spec.extracted_concerns.append(
+            f"could not fully meet the {requested_min_apy:.0f}% yield floor "
+            "within your other constraints"
+        )
+        log.info("after relaxing min_apy: %d candidates", len(candidates))
 
     if optimizer_name == "mean_variance":
         positions = optimizer.mean_variance(
