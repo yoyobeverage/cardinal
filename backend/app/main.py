@@ -275,6 +275,7 @@ def portfolio(form: FormInput, optimizer_name: str = "weighted_sum") -> Allocati
     if target_apy:
         positions, clamped_to = optimizer.target_yield(
             candidates, form.capital_usd, target_apy,
+            correlation_vectors=_correlation_vectors(),
             tax_wrapper=form.tax_wrapper.value,
         )
         if clamped_to is not None:

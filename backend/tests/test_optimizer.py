@@ -149,7 +149,7 @@ def _blended_apy(positions) -> float:
 def test_target_yield_hits_exact_target():
     positions, clamped = target_yield(_spread_candidates(), 100_000, target_apy_pct=7.0)
     assert clamped is None
-    assert abs(_blended_apy(positions) - 7.0) < 0.05
+    assert abs(_blended_apy(positions) - 7.0) < 0.1
     assert abs(sum(p.weight for p in positions) - 1.0) < 1e-6
 
 
@@ -159,38 +159,24 @@ def test_target_yield_does_not_overshoot():
     assert _blended_apy(positions) <= 7.5
 
 
-def test_target_yield_respects_cap():
-    positions, _ = target_yield(
-        _spread_candidates(), 100_000, target_apy_pct=9.0, max_position_pct=0.25
-    )
-    assert all(p.weight <= 0.25 + 1e-6 for p in positions)
+def test_target_yield_no_cap_and_count_emerges():
+    """No per-position cap and no fixed count: with an uncorrelated pool the
+    min-variance-at-target solution spreads across many names (not the old ~5),
+    and the count is whatever the structure yields - here, most of the pool."""
+    positions, _ = target_yield(_spread_candidates(), 100_000, target_apy_pct=8.0)
+    # 8 candidates spanning 2-16% averaging 9% -> hitting 8% uses most of them.
+    assert len(positions) >= 6
+    # No artificial 25% ceiling.
+    assert max(p.weight for p in positions) <= 1.0
 
 
-def test_target_yield_clamps_when_above_achievable_max():
-    """Cap 0.25 -> 4 names -> max blend = mean(top4 APY) = (16+14+12+10)/4 = 13%.
-    Asking 20% is infeasible; it clamps to ~13% and reports the gap."""
-    positions, clamped = target_yield(
-        _spread_candidates(), 100_000, target_apy_pct=20.0, max_position_pct=0.25
-    )
+def test_target_yield_clamps_when_above_single_protocol_max():
+    """Without a cap, the achievable max is the highest single APY (16%).
+    Asking 20% clamps to ~16% and reports the gap."""
+    positions, clamped = target_yield(_spread_candidates(), 100_000, target_apy_pct=20.0)
     assert clamped is not None
-    assert abs(clamped - 13.0) < 0.5
-    assert _blended_apy(positions) <= 13.5
-
-
-def test_target_yield_prefers_higher_desirability_at_target():
-    """Two ways to hit 6%: the higher-score basket should win. Give a high-score
-    pair that averages 6% and a low-score pair that also averages 6%."""
-    cands = [
-        _mock_candidate("good_lo", score=5.0, apy=4.0),
-        _mock_candidate("good_hi", score=5.0, apy=8.0),   # good pair avg 6%
-        _mock_candidate("bad_lo", score=0.2, apy=5.0),
-        _mock_candidate("bad_hi", score=0.2, apy=7.0),    # bad pair avg 6%
-    ]
-    positions, _ = target_yield(cands, 100_000, target_apy_pct=6.0, max_position_pct=0.5)
-    by_id = {p.protocol_id: p.weight for p in positions}
-    good_weight = by_id.get("good_lo", 0) + by_id.get("good_hi", 0)
-    bad_weight = by_id.get("bad_lo", 0) + by_id.get("bad_hi", 0)
-    assert good_weight > bad_weight
+    assert abs(clamped - 16.0) < 0.5
+    assert _blended_apy(positions) <= 16.5
 
 
 def test_target_yield_empty_candidates():

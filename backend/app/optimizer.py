@@ -16,7 +16,7 @@ import logging
 from typing import Any
 
 import numpy as np
-from scipy.optimize import linprog, minimize
+from scipy.optimize import minimize
 
 from app.schemas import PointPayload, Position
 
@@ -129,87 +129,115 @@ def _desirability(cand: Any, payload: PointPayload, tax_wrapper: str) -> float:
     return max(sim * risk_factor * tax_mult, 1e-6)
 
 
+def _sigma(payloads: list[PointPayload], correlation_vectors: dict[str, list[float]]) -> np.ndarray:
+    """Pairwise cosine-similarity matrix of correlation vectors - a stand-in
+    covariance. Falls back to identity (treat assets as uncorrelated) when no
+    correlation data is available, which still drives diversification."""
+    n = len(payloads)
+    C = np.array([correlation_vectors.get(p.id, [0.0] * 8) for p in payloads], dtype=float)
+    if C.shape[1] == 0 or np.all(C == 0):
+        return np.eye(n)
+    norms = np.linalg.norm(C, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    Cn = C / norms
+    return Cn @ Cn.T + 1e-6 * np.eye(n)
+
+
 def target_yield(
     candidates: list[Any],
     capital_usd: float,
     target_apy_pct: float,
+    correlation_vectors: dict[str, list[float]] | None = None,
     tax_wrapper: str = "taxable",
-    max_position_pct: float = 0.25,
+    pref_tilt: float = 0.15,
 ) -> tuple[list[Position], float | None]:
-    """Build the best-matching basket whose BLENDED APY equals target_apy_pct.
+    """Build the best basket whose BLENDED APY equals target_apy_pct, with the
+    position count emerging naturally - no per-position cap, no fixed count.
 
-    Linear program over the full candidate pool:
-        maximize  sum(w_i * desirability_i)        (match the user's context)
-        s.t.      sum(w_i * apy_i) = target         (hit the yield exactly)
+    Because Qdrant similarity barely separates the candidate pool (scores cluster
+    in a ~1.1x band), "best" here is driven by genuine diversification: hold the
+    least-correlated mix that lands on the target, tilted slightly toward the
+    better-matching names. Quadratic program over the full pool:
+
+        minimize  w^T Σ w  -  pref_tilt * (desirability_norm · w)
+        s.t.      sum(w_i * apy_i) = target      (hit the yield exactly)
                   sum(w_i) = 1
-                  0 <= w_i <= max_position_pct
+                  w_i >= 0                         (no upper cap)
 
-    The equality constraint pins the blend to the target, so it neither
-    undershoots nor overshoots (no more "asked 7%, got 13%"). The objective
-    maximizes preference-match, so among all baskets hitting the target it picks
-    the one that best fits everything else the user said.
+    Σ is the cosine-similarity matrix of correlation vectors. The quadratic term
+    spreads weight across uncorrelated protocols, so how many positions you get
+    is decided by the catalog's structure and your target - not an arbitrary cap.
+    The equality pins the blend to the target (no overshoot). The pref_tilt term
+    breaks ties toward higher-desirability names without dominating.
 
-    If the target is outside the achievable range (given the per-position cap),
-    it's clamped to the nearest achievable value and that clamped value is
-    returned as the second tuple element (None when the exact target was hit) so
-    the caller can surface the gap.
+    Targets outside the achievable [min, max] single-protocol APY clamp to the
+    nearest reachable value, returned as the second element (None when hit
+    exactly) so the caller can surface the gap.
     """
     if not candidates:
         return [], None
+    correlation_vectors = correlation_vectors or {}
 
     payloads = [PointPayload(**c.payload) for c in candidates]
-    n = len(payloads)
     apys = np.array([p.current_apy for p in payloads], dtype=float)
     desir = np.array([_desirability(c, p, tax_wrapper) for c, p in zip(candidates, payloads)])
+    desir_norm = desir / max(desir.mean(), 1e-9)  # mean 1 -> pref_tilt is scale-free
 
-    # Achievable blended-APY range under sum(w)=1, 0<=w<=cap: greedily fill the
-    # cap from the highest-APY names (max) or lowest (min).
-    def _extreme(sorted_apys: np.ndarray) -> float:
-        remaining, total = 1.0, 0.0
-        for a in sorted_apys:
-            w = min(max_position_pct, remaining)
-            total += w * a
-            remaining -= w
-            if remaining <= 1e-9:
-                break
-        return total
-
-    apy_max = _extreme(np.sort(apys)[::-1])
-    apy_min = _extreme(np.sort(apys))
-    effective = float(np.clip(target_apy_pct, apy_min, apy_max))
+    # Without a cap, any blend in [min apy, max apy] is reachable.
+    effective = float(np.clip(target_apy_pct, apys.min(), apys.max()))
     clamped_to = None if abs(effective - target_apy_pct) < 1e-6 else effective
 
-    # maximize desirability  ==  minimize -desirability
-    res = linprog(
-        c=-desir,
-        A_eq=np.vstack([np.ones(n), apys]),
-        b_eq=np.array([1.0, effective]),
-        bounds=[(0.0, max_position_pct)] * n,
-        method="highs",
-    )
-    if not res.success:
-        log.warning("target_yield LP failed (%s); falling back to weighted_sum", res.message)
-        return weighted_sum(candidates, capital_usd, max_position_pct,
-                            tax_wrapper=tax_wrapper), None
+    def _solve(idx: np.ndarray) -> np.ndarray | None:
+        """Min-variance-at-target QP over the candidate subset `idx`."""
+        sub_apys = apys[idx]
+        sub_desir = desir_norm[idx]
+        sigma = _sigma([payloads[i] for i in idx], correlation_vectors)
+        m = len(idx)
 
-    weights = np.maximum(res.x, 0.0)
-    total = weights.sum()
-    if total <= 0:
-        return weighted_sum(candidates, capital_usd, max_position_pct,
-                            tax_wrapper=tax_wrapper), None
-    weights = weights / total
+        def obj(w: np.ndarray) -> float:
+            return float(w @ sigma @ w - pref_tilt * (sub_desir @ w))
+
+        cons = [
+            {"type": "eq", "fun": lambda w: float(w.sum() - 1.0)},
+            {"type": "eq", "fun": lambda w: float(sub_apys @ w - effective)},
+        ]
+        res = minimize(
+            obj, np.full(m, 1.0 / m), method="SLSQP",
+            bounds=[(0.0, 1.0)] * m, constraints=cons,
+            options={"maxiter": 400, "ftol": 1e-10},
+        )
+        return res.x if res.success else None
+
+    full_idx = np.arange(len(payloads))
+    w_full = _solve(full_idx)
+    if w_full is None:
+        log.warning("target_yield QP failed; falling back to weighted_sum")
+        return weighted_sum(candidates, capital_usd, tax_wrapper=tax_wrapper), None
+
+    # Drop negligible positions, then re-solve on the support so the kept basket
+    # still lands exactly on the target (renormalizing alone would drift it).
+    support = full_idx[np.maximum(w_full, 0.0) > 5e-3]
+    if len(support) >= 2:
+        w_sup = _solve(support)
+        if w_sup is not None:
+            full_idx, w_full = support, w_sup
+
+    weights = np.maximum(w_full, 0.0)
+    if weights.sum() <= 0:
+        return weighted_sum(candidates, capital_usd, tax_wrapper=tax_wrapper), None
+    weights = weights / weights.sum()
 
     positions = [
         Position(
-            protocol_id=p.id,
-            payload=p,
+            protocol_id=payloads[i].id,
+            payload=payloads[i],
             weight=float(w),
             dollars=float(w * capital_usd),
-            score=float(c.score),
+            score=float(candidates[i].score),
             per_lens_scores={},
         )
-        for w, p, c in zip(weights, payloads, candidates)
-        if w > 1e-4  # drop the names the LP zeroed out
+        for i, w in zip(full_idx, weights)
+        if w > 1e-4
     ]
     positions.sort(key=lambda x: -x.weight)
     return positions, clamped_to
